@@ -1,0 +1,497 @@
+Generate Dental Clinic Management System Frontend
+
+You are a senior frontend engineer and UI/UX designer. Build a complete modern frontend application for a Dental Clinic Management System.
+
+The application is used by dentists to manage patients, appointments, dental records, files, visits, and billing.
+
+The frontend must be production-ready, clean, responsive, and designed for a medical environment.
+
+Technology Requirements
+
+Build using:
+
+React + TypeScript
+Vite
+Tailwind CSS
+React Router
+Axios for API communication
+React Query / TanStack Query for server state management
+A component library such as shadcn/ui or equivalent
+Form handling with React Hook Form + Zod validation
+Modern responsive dashboard layout
+
+Use a clean folder architecture:
+
+src/
+ ├── api/
+ │    ├── axios.ts
+ │    ├── auth.ts
+ │    ├── patients.ts
+ │    ├── appointments.ts
+ │
+ ├── components/
+ │    ├── layout/
+ │    ├── ui/
+ │    ├── forms/
+ │
+ ├── pages/
+ │    ├── Login/
+ │    ├── Dashboard/
+ │    ├── Patients/
+ │    ├── Appointments/
+ │    ├── DentalChart/
+ │    ├── Billing/
+ │
+ ├── hooks/
+ ├── contexts/
+ ├── types/
+ ├── utils/
+Design Direction
+
+Create a professional dental clinic interface.
+
+Style:
+
+Clean medical dashboard
+White background
+Soft blue/teal accents
+Rounded cards
+Minimal shadows
+High readability
+Desktop-first but fully responsive
+Modern SaaS style similar to healthcare management systems
+
+Use icons for:
+
+Patients
+Calendar
+Teeth
+Files
+Payments
+Settings
+Authentication
+
+Implement authentication flow:
+
+Login page:
+
+POST /api/auth/login
+
+Request:
+
+{
+ "email":"",
+ "password":""
+}
+
+Response:
+
+{
+ "access_token":"",
+ "user":{
+   "id":"",
+   "role":"doctor",
+   "full_name":""
+ }
+}
+
+Requirements:
+
+Save JWT token securely
+Axios interceptor automatically adds:
+Authorization: Bearer TOKEN
+On application startup:
+GET /api/auth/me
+
+Restore user session.
+
+Handle:
+
+401:
+ redirect to login
+
+403:
+ user authenticated but no permission
+ disable create/edit/delete actions
+
+Create centralized permission system:
+
+Example:
+
+canCreate()
+canEdit()
+canDelete()
+
+Do not create admin panels or role switching.
+
+Main Layout
+
+Create:
+
+Sidebar
+
+Items:
+
+Dashboard
+Patients
+Appointments
+Dental Chart
+Visits
+Files
+Billing
+Availability
+Settings
+Header
+
+Show:
+
+Doctor name
+Notification icon
+Profile menu
+Logout button
+Pages Required
+1. Login Page
+
+Features:
+
+Email input
+Password input
+Login button
+Validation errors
+Loading state
+Error toast
+2. Dashboard
+
+Create medical dashboard.
+
+Show:
+
+Cards:
+
+Total Patients
+Today's Appointments
+Upcoming Appointments
+Pending Payments
+
+Sections:
+
+Today's appointment list
+Recent patients
+Quick actions
+3. Patients Management
+
+API:
+
+GET /api/patients
+
+Support:
+
+?page
+?search
+?limit
+?offset
+
+Create:
+
+Patients Table
+
+Columns:
+
+Name
+Phone
+Birth Date
+Gender
+Blood Type
+Created Date
+Actions
+
+Features:
+
+Search
+Pagination
+View patient
+Edit patient
+Delete patient
+Create patient
+Patient Form
+
+Fields:
+
+full_name
+phone
+date_of_birth
+gender
+address
+blood_type
+allergies
+medical_notes
+
+Use:
+
+Input fields
+Select
+Textarea
+Validation
+4. Patient Details Page
+
+Create tabs:
+
+Profile
+Appointments
+Visits
+Dental Chart
+Files
+Billing
+Profile Tab
+
+Display:
+
+Patient information card.
+
+Actions:
+
+Edit patient
+Delete patient
+Appointments Tab
+
+Show:
+
+Patient appointment history.
+
+Columns:
+
+Date
+Time
+Status
+Doctor
+Notes
+Visits Tab
+
+Show medical visits.
+
+Each visit contains:
+
+Diagnosis
+Treatment
+Notes
+Date
+Doctor
+
+Create:
+
+"Add Visit" form.
+
+Dental Chart (Important)
+
+Create a professional FDI dental chart.
+
+Requirements:
+
+Support:
+
+Permanent teeth
+
+FDI:
+
+11-18
+21-28
+31-38
+41-48
+Primary teeth:
+51-55
+61-65
+71-75
+81-85
+
+Display:
+
+Upper jaw
+Lower jaw
+Left/right orientation
+Tooth numbers
+
+Each tooth is clickable.
+
+When clicking:
+
+Open side panel:
+
+Tooth Number
+Tooth Name
+
+History:
+----------------
+
+Condition
+Date
+Doctor
+Treatment
+Status
+
+
+[Add Condition]
+Add Dental Record
+
+Form:
+
+condition
+description
+treatment
+status
+
+Status:
+
+active
+resolved
+extracted
+
+Important:
+
+Dental records are APPEND ONLY.
+
+Do not allow editing old records.
+
+The UI should look like a timeline/history system.
+
+5. Files Management
+
+Patient files page.
+
+Support:
+
+Upload files
+Preview images
+Download PDFs
+Delete files
+
+Types:
+
+X-ray
+Image
+PDF
+
+Fields:
+
+file_url
+file_type
+description
+uploaded_by
+created_at
+6. Appointment Management
+
+Create calendar/list interface.
+
+Features:
+
+Day/week calendar
+Filter by:
+patient
+status
+date
+
+Appointment fields:
+
+patient_id
+doctor_id
+appointment_date
+start_time
+end_time
+status
+notes
+
+Statuses:
+
+scheduled
+completed
+cancelled
+
+Important:
+
+Handle:
+
+409 Conflict
+
+Example:
+
+Doctor already has appointment.
+
+Show inline message:
+
+"Doctor is not available at this time."
+
+Do not show generic toast.
+
+7. Doctor Availability
+
+Weekly schedule editor.
+
+7 rows:
+
+Sunday
+Monday
+Tuesday
+Wednesday
+Thursday
+Friday
+Saturday
+
+Each row:
+
+Start time
+End time
+Enable/Disable
+8. Billing System
+
+Patient billing page.
+
+Invoice list:
+
+Columns:
+
+Invoice ID
+Total Amount
+Paid Amount
+Status
+Created Date
+
+Invoice details:
+
+Show:
+
+Total Amount
+Paid Amount
+Remaining Amount
+Status
+
+Payment history:
+
+Amount
+Method
+Date
+Received By
+
+Add payment:
+
+Fields:
+
+amount
+payment_method
+
+Methods:
+
+cash
+card
+transfer
+
+Important:
+
+Never calculate:
+
+paid_amount
+status
+
+Frontend only creates payments.
+
+After payment:
+
+Refetch invoice

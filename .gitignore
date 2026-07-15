@@ -1,0 +1,30 @@
+﻿# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Environment variables - NEVER commit these
+.env
+.env.local
+.env.production
+frontend/.env
+frontend/.env.local
+
+# Build output
+dist/
+frontend/dist/
+build/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
