@@ -31,4 +31,16 @@ export async function uploadPatientFile(params: UploadPatientFileInput, fileUrl:
 }
 
 
+export async function deletePatientFile(file_id: string) {
+  const { data, error } = await supabase
+    .from("patient_files")
+    .delete()
+    .eq("id", file_id)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 

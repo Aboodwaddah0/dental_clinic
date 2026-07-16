@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { uploadFile } from "../sw3/upload.service.js";
 import * as patientFilesService from "./patient_files.service.js";
-import { uploadPatientFileSchema, listPatientFilesQuerySchema } from "./patient_files.schema.js";
+import { uploadPatientFileSchema, listPatientFilesQuerySchema, patientFileIdParamSchema } from "./patient_files.schema.js";
 
 export async function listPatientFilesHandler(req: Request, res: Response) {
   const query = listPatientFilesQuerySchema.parse(req.query);
@@ -10,7 +10,13 @@ export async function listPatientFilesHandler(req: Request, res: Response) {
 }
 
 
- export async function uploadPatientFileHandler(req: Request, res: Response) {
+export async function deletePatientFileHandler(req: Request, res: Response) {
+  const id = patientFileIdParamSchema.parse(req.params.id);
+  await patientFilesService.deletePatientFile(id);
+  res.status(204).send();
+}
+
+export async function uploadPatientFileHandler(req: Request, res: Response) {
   const input = uploadPatientFileSchema.parse(req.body);
 
   if (!req.file) {
