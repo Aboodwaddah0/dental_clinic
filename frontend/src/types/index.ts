@@ -70,10 +70,10 @@ export interface PatientFile {
 export interface Invoice {
   id: string;
   patient_id: string;
-  patient_name: string;
+  patient_name: string | null;
   total_amount: number;
   paid_amount: number;
-  status: "pending" | "paid" | "partial";
+  status: "unpaid" | "partially_paid" | "paid";
   created_at: string;
   payments: Payment[];
 }
@@ -83,7 +83,7 @@ export interface Payment {
   invoice_id: string;
   amount: number;
   payment_method: "cash" | "card" | "transfer";
-  date: string;
+  payment_date: string;
   received_by: string;
 }
 

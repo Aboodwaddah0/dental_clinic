@@ -8,6 +8,7 @@ import { patientsRouter } from "./modules/patients/patients.routes.js";
 import { appointmentsRouter } from "./modules/appointments/appointments.routes.js";
 import { visitsRouter } from "./modules/visits/visits.routes.js";
 import { patientFilesRouter } from "./modules/patient_files/patient_files.routes.js";
+import { invoicesRouter } from "./modules/invoices/invoices.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -39,6 +40,7 @@ app.use("/api/patients", patientsRouter);
 app.use("/api/appointments", appointmentsRouter);
 app.use("/api/visits", visitsRouter);
 app.use("/api/patient-files", patientFilesRouter);
+app.use("/api/invoices", invoicesRouter);
 
 
 app.use(errorHandler);

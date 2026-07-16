@@ -84,7 +84,7 @@ export default function DentalChartPage() {
         )}
       </div>
 
-      <DentalChart records={patientRecords} onAddRecord={handleAddRecord} canCreate={true} />
+      <DentalChart records={records} onAddRecord={handleAddRecord} canCreate={true} />
     </div>
   );
 }

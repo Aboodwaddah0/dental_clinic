@@ -96,6 +96,11 @@ export default function PatientDetail() {
     setLoadedTabs((prev) => new Set(prev).add(activeTab));
 
     switch (activeTab) {
+      case "profile":
+        listInvoices({ patient_id: id, limit: 200 })
+          .then(({ data }) => setInvoices(data))
+          .catch(() => {});
+        break;
       case "appointments":
         listAppointments({ patient_id: id, limit: 100 })
           .then(({ data }) => setAppointments(data))
@@ -273,6 +278,7 @@ export default function PatientDetail() {
       {activeTab === "profile" && (
         <ProfileTab
           patient={patient}
+          invoices={invoices}
           onEdit={() => setShowEditForm(true)}
           canEdit={authLoading || canEdit()}
           canDelete={authLoading || canDelete()}
@@ -355,10 +361,14 @@ export default function PatientDetail() {
 
 // ─── Profile Tab ────────────────────────────────────────────────────────────
 function ProfileTab({
-  patient, onEdit, canEdit, canDelete, onDelete,
+  patient, invoices, onEdit, canEdit, canDelete, onDelete,
 }: {
-  patient: Patient; onEdit: () => void; canEdit: boolean; canDelete: boolean; onDelete: () => void;
+  patient: Patient; invoices: Invoice[]; onEdit: () => void; canEdit: boolean; canDelete: boolean; onDelete: () => void;
 }) {
+  const totalBilled = invoices.reduce((s, i) => s + Number(i.total_amount), 0);
+  const totalPaid = invoices.reduce((s, i) => s + Number(i.paid_amount), 0);
+  const remaining = totalBilled - totalPaid;
+
   const rows = [
     { label: "Full Name", value: patient.full_name },
     { label: "Phone", value: patient.phone },
@@ -395,6 +405,26 @@ function ProfileTab({
           ))}
         </div>
       </div>
+      {/* Balance summary */}
+      {invoices.length > 0 && (
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-card rounded-xl border border-border p-5">
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Total Billed</p>
+            <p className="text-lg font-bold text-foreground">${totalBilled.toLocaleString()}</p>
+          </div>
+          <div className="bg-card rounded-xl border border-border p-5">
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Total Paid</p>
+            <p className="text-lg font-bold text-emerald-600">${totalPaid.toLocaleString()}</p>
+          </div>
+          <div className={`rounded-xl border p-5 ${remaining > 0 ? "bg-amber-50 border-amber-200" : "bg-card border-border"}`}>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Remaining</p>
+            <p className={`text-lg font-bold ${remaining > 0 ? "text-amber-600" : "text-muted-foreground"}`}>
+              ${remaining.toLocaleString()}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-card rounded-xl border border-border p-5">
           <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-2">Allergies</p>
@@ -769,7 +799,7 @@ function BillingTab({
                           <tr key={p.id}>
                             <td className="py-2 font-semibold text-emerald-600">${p.amount.toLocaleString()}</td>
                             <td className="py-2 capitalize text-muted-foreground">{p.payment_method}</td>
-                            <td className="py-2 text-muted-foreground">{formatDate(p.date)}</td>
+                            <td className="py-2 text-muted-foreground">{formatDate(p.payment_date)}</td>
                             <td className="py-2 text-muted-foreground">{p.received_by}</td>
                           </tr>
                         ))}
@@ -866,8 +896,8 @@ function ApptStatusBadge({ status }: { status: string }) {
 
 function InvoiceStatusBadge({ status }: { status: string }) {
   if (status === "paid") return <span className="text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full font-semibold">Paid</span>;
-  if (status === "partial") return <span className="text-xs text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full font-semibold">Partial</span>;
-  return <span className="text-xs text-red-600 bg-red-50 px-2.5 py-1 rounded-full font-semibold">Pending</span>;
+  if (status === "partially_paid") return <span className="text-xs text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full font-semibold">Partial</span>;
+  return <span className="text-xs text-red-600 bg-red-50 px-2.5 py-1 rounded-full font-semibold">Unpaid</span>;
 }
 
 function formatDate(d: string) {

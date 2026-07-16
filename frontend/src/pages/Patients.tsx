@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import type { Patient } from "../types";
 import { useAuth } from "../contexts/AuthContext";
 import { listPatients, deletePatient } from "../api/patients";
+import { listInvoices } from "../api/invoices";
 import PatientForm from "../components/PatientForm";
 import {
   Table,
@@ -50,6 +51,7 @@ export default function Patients() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [remainingMap, setRemainingMap] = useState<Record<string, number>>({});
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -65,6 +67,15 @@ export default function Patients() {
       const res = await listPatients({ search, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE });
       setPatients(res.data);
       setCount(res.count);
+      // fetch invoices for the current page of patients and build remaining map
+      listInvoices({ limit: 100 }).then(({ data }) => {
+        const map: Record<string, number> = {};
+        for (const inv of data) {
+          const r = Number(inv.total_amount) - Number(inv.paid_amount);
+          map[inv.patient_id] = (map[inv.patient_id] ?? 0) + r;
+        }
+        setRemainingMap(map);
+      }).catch(() => {});
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to load patients");
     } finally {
@@ -140,6 +151,7 @@ export default function Patients() {
               <TableHead className="hidden md:table-cell">{t("patients.columns.dateOfBirth")}</TableHead>
               <TableHead className="hidden lg:table-cell">{t("patients.columns.gender")}</TableHead>
               <TableHead className="hidden lg:table-cell">{t("patients.columns.bloodType")}</TableHead>
+              <TableHead className="hidden sm:table-cell">Remaining</TableHead>
               <TableHead className="text-right">{t("patients.columns.actions")}</TableHead>
             </TableRow>
           </TableHeader>
@@ -147,7 +159,7 @@ export default function Patients() {
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell colSpan={6}>
+                  <TableCell colSpan={7}>
                     <Skeleton className="h-8 w-full" />
                   </TableCell>
                 </TableRow>
@@ -182,6 +194,17 @@ export default function Patients() {
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
                       {p.blood_type ? <Badge variant="secondary">{p.blood_type}</Badge> : "—"}
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      {remainingMap[p.id] != null ? (
+                        remainingMap[p.id] > 0 ? (
+                          <span className="text-amber-600 font-semibold">${remainingMap[p.id].toLocaleString()}</span>
+                        ) : (
+                          <span className="text-emerald-600 font-medium">Paid</span>
+                        )
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
@@ -220,7 +243,7 @@ export default function Patients() {
             )}
             {!loading && patients.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                   {t("patients.noPatients")}
                 </TableCell>
               </TableRow>
