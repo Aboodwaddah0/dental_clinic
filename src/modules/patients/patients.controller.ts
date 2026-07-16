@@ -21,7 +21,7 @@ export async function getPatientHandler(req: Request, res: Response) {
 
 export async function createPatientHandler(req: Request, res: Response) {
   const input = createPatientSchema.parse(req.body);
-  // requireAuth (run before this handler) guarantees req.user is set.
+  
   const patient = await patientsService.createPatient(input, req.user!.id);
   res.status(201).json({ data: patient });
 }

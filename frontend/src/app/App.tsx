@@ -1,16 +1,26 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
+import { Suspense, lazy } from "react";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import Layout from "../components/Layout";
-import Login from "../pages/Login";
-import Dashboard from "../pages/Dashboard";
-import Patients from "../pages/Patients";
-import PatientDetail from "../pages/PatientDetail";
-import Appointments from "../pages/Appointments";
-import DentalChartPage from "../pages/DentalChartPage";
-import Files from "../pages/Files";
-import Billing from "../pages/Billing";
-import Availability from "../pages/Availability";
-import Settings from "../pages/Settings";
+
+const Login = lazy(() => import("../pages/Login"));
+const Dashboard = lazy(() => import("../pages/Dashboard"));
+const Patients = lazy(() => import("../pages/Patients"));
+const PatientDetail = lazy(() => import("../pages/PatientDetail"));
+const Appointments = lazy(() => import("../pages/Appointments"));
+const DentalChartPage = lazy(() => import("../pages/DentalChartPage"));
+const Files = lazy(() => import("../pages/Files"));
+const Billing = lazy(() => import("../pages/Billing"));
+const Availability = lazy(() => import("../pages/Availability"));
+const Settings = lazy(() => import("../pages/Settings"));
+
+function PageFallback() {
+  return (
+    <div className="h-full flex items-center justify-center">
+      <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+    </div>
+  );
+}
 
 function ProtectedRoutes() {
   const { user, isLoading } = useAuth();
@@ -30,18 +40,20 @@ function ProtectedRoutes() {
 
   return (
     <Layout>
-      <Routes>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/patients" element={<Patients />} />
-        <Route path="/patients/:id" element={<PatientDetail />} />
-        <Route path="/appointments" element={<Appointments />} />
-        <Route path="/dental-chart" element={<DentalChartPage />} />
-        <Route path="/files" element={<Files />} />
-        <Route path="/billing" element={<Billing />} />
-        <Route path="/availability" element={<Availability />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
+      <Suspense fallback={<PageFallback />}>
+        <Routes>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/patients" element={<Patients />} />
+          <Route path="/patients/:id" element={<PatientDetail />} />
+          <Route path="/appointments" element={<Appointments />} />
+          <Route path="/dental-chart" element={<DentalChartPage />} />
+          <Route path="/files" element={<Files />} />
+          <Route path="/billing" element={<Billing />} />
+          <Route path="/availability" element={<Availability />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </Suspense>
     </Layout>
   );
 }
@@ -58,13 +70,15 @@ function AppRoutes() {
   }
 
   return (
-    <Routes>
-      <Route
-        path="/login"
-        element={user ? <Navigate to="/dashboard" replace /> : <Login />}
-      />
-      <Route path="/*" element={<ProtectedRoutes />} />
-    </Routes>
+    <Suspense fallback={<PageFallback />}>
+      <Routes>
+        <Route
+          path="/login"
+          element={user ? <Navigate to="/dashboard" replace /> : <Login />}
+        />
+        <Route path="/*" element={<ProtectedRoutes />} />
+      </Routes>
+    </Suspense>
   );
 }
 

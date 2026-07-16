@@ -1,9 +1,27 @@
+import NodeCache from "node-cache";
 import { supabase } from "../../lib/supabase.js";
 import { NotFoundError } from "../../lib/errors.js";
 import { NOT_FOUND_CODE } from "../../lib/pg-error-codes.js";
 import type { CreatePatientInput, ListPatientsQuery, UpdatePatientInput } from "./patients.schema.js";
 
+const cache = new NodeCache({ stdTTL: 300 });
+
+function listKey(q: ListPatientsQuery) {
+  return `list:${q.search ?? ""}:${q.limit}:${q.offset}`;
+}
+
+function patientKey(id: string) {
+  return `patient:${id}`;
+}
+
+function invalidateAll() {
+  cache.flushAll();
+}
+
 export async function getPatientById(id: string) {
+  const cached = cache.get(patientKey(id));
+  if (cached) return cached;
+
   const { data, error } = await supabase.from("patients").select("*").eq("id", id).single();
 
   if (error) {
@@ -13,26 +31,33 @@ export async function getPatientById(id: string) {
     throw new Error(error.message);
   }
 
+  cache.set(patientKey(id), data);
   return data;
 }
 
-export async function listPatients({ search, limit, offset }: ListPatientsQuery) {
+export async function listPatients(q: ListPatientsQuery) {
+  const key = listKey(q);
+  const cached = cache.get<{ data: unknown[]; count: number }>(key);
+  if (cached) return cached;
+
   let query = supabase.from("patients").select("*", { count: "exact" });
 
-  if (search) {
-    const safeSearch = search.replace(/[,()]/g, "");
+  if (q.search) {
+    const safeSearch = q.search.replace(/[,()]/g, "");
     query = query.or(`full_name.ilike.%${safeSearch}%,phone.ilike.%${safeSearch}%`);
   }
 
   const { data, error, count } = await query
     .order("created_at", { ascending: false })
-    .range(offset, offset + limit - 1);
+    .range(q.offset, q.offset + q.limit - 1);
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return { data, count: count ?? 0 };
+  const result = { data, count: count ?? 0 };
+  cache.set(key, result);
+  return result;
 }
 
 export async function createPatient(patientData: CreatePatientInput, registeredBy: string) {
@@ -46,6 +71,7 @@ export async function createPatient(patientData: CreatePatientInput, registeredB
     throw new Error(error.message);
   }
 
+  invalidateAll();
   return data;
 }
 
@@ -64,6 +90,7 @@ export async function updatePatient(id: string, patientData: UpdatePatientInput)
     throw new Error(error.message);
   }
 
+  invalidateAll();
   return data;
 }
 
@@ -78,5 +105,6 @@ export async function deletePatient(id: string) {
     throw new NotFoundError("Patient not found");
   }
 
+  invalidateAll();
   return data[0];
 }

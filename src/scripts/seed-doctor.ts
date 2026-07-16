@@ -1,5 +1,4 @@
-// One-off dev script: creates (or reuses) a test doctor account so you have
-// something to log in with locally. Run with: npm run seed:doctor
+
 import { supabase } from "../lib/supabase.js";
 
 const email = process.env.SEED_DOCTOR_EMAIL ?? "doctor@example.com";

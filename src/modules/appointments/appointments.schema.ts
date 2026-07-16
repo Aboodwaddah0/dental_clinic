@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// Matches Postgres `time` column input: "HH:MM" or "HH:MM:SS".
+
 const timeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/, "must be HH:MM");
 
  const appointmentStatusEnum = z.enum(["scheduled", "completed", "cancelled"]);
@@ -19,8 +19,8 @@ export const createAppointmentSchema = createAppointmentBase.refine((d) => d.end
   path: ["end_time"],
 });
 
-// patient_id/doctor_id are immutable after creation — only the schedule,
-// status, and notes can change.
+
+
 export const updateAppointmentSchema = z.object({
   appointment_date: z.string().date().optional(),
   start_time: timeSchema.optional(),
