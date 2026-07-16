@@ -14,10 +14,17 @@ const app = express();
 
 app.use(helmet());
 app.use(cors({
-  origin: [
-    "http://localhost:5173",
-    env.frontendUrl,
-  ].filter(Boolean),
+  origin: (origin, callback) => {
+    const allowed = [
+      "http://localhost:5173",
+      env.frontendUrl,
+    ];
+    if (!origin || allowed.includes(origin) || origin.endsWith(".vercel.app")) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials: true,
 }));
 app.use(morgan("dev"));
