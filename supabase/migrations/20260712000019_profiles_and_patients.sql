@@ -1,5 +1,10 @@
 -- Staff profiles (layered on Supabase Auth) and core patient records.
 
+do $$ begin
+  create type staff_role as enum ('doctor', 'receptionist', 'admin');
+exception when duplicate_object then null;
+end $$;
+
 create table profiles (
   id          uuid primary key references auth.users (id) on delete cascade,
   full_name   varchar(100) not null,
