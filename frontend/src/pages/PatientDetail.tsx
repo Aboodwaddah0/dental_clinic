@@ -274,8 +274,8 @@ export default function PatientDetail() {
         <ProfileTab
           patient={patient}
           onEdit={() => setShowEditForm(true)}
-          canEdit={canEdit()}
-          canDelete={canDelete()}
+          canEdit={authLoading || canEdit()}
+          canDelete={authLoading || canDelete()}
           onDelete={() => setShowDeleteConfirm(true)}
         />
       )}
@@ -284,7 +284,7 @@ export default function PatientDetail() {
         <VisitsTab
           visits={visits}
           onAdd={handleAddVisit}
-          canCreate={canCreate()}
+          canCreate={authLoading || canCreate()}
           showForm={showVisitForm}
           setShowForm={setShowVisitForm}
         />
@@ -293,13 +293,13 @@ export default function PatientDetail() {
         <DentalChart
           records={dentalRecords}
           onAddRecord={handleAddDentalRecord}
-          canCreate={canCreate()}
+          canCreate={authLoading || canCreate()}
         />
       )}
       {activeTab === "files" && (
         <FilesTab
           files={files}
-          canCreate={canCreate()}
+          canCreate={authLoading || canCreate()}
           onUpload={handleUploadFile}
           onDelete={handleDeleteFile}
           onPreview={setPreviewFile}
@@ -309,7 +309,7 @@ export default function PatientDetail() {
         <BillingTab
           invoices={invoices}
           onAddPayment={(invId) => setShowPaymentModal(invId)}
-          canCreate={canCreate()}
+          canCreate={authLoading || canCreate()}
         />
       )}
 

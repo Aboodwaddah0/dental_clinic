@@ -34,7 +34,7 @@ async function hasConflict(
 }
 
 export async function listAppointments({ doctor_id, patient_id, status, from, to, limit, offset }: ListAppointmentsQuery) {
-  let query = supabase.from("appointments").select("*", { count: "exact" });
+  let query = supabase.from("appointments").select("*, patient:patients!patient_id(full_name)", { count: "exact" });
 
   if (doctor_id) query = query.eq("doctor_id", doctor_id);
   if (patient_id) query = query.eq("patient_id", patient_id);
@@ -51,7 +51,13 @@ export async function listAppointments({ doctor_id, patient_id, status, from, to
     throw new Error(error.message);
   }
 
-  return { data, count: count ?? 0 };
+  const flattened = (data ?? []).map((a: any) => ({
+    ...a,
+    patient_name: a.patient?.full_name ?? null,
+    patient: undefined,
+  }));
+
+  return { data: flattened, count: count ?? 0 };
 }
 
 export async function getAppointmentById(id: string) {
