@@ -17,6 +17,7 @@ import {
   Menu,
   Languages,
   Stethoscope,
+  BarChart3,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -54,6 +55,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { to: "/files", label: t("nav.files"), icon: FolderOpen },
     { to: "/billing", label: t("nav.billing"), icon: CreditCard },
     { to: "/availability", label: t("nav.availability"), icon: Clock },
+    { to: "/reports", label: t("nav.reports"), icon: BarChart3 },
     { to: "/settings", label: t("nav.settings"), icon: Settings },
   ];
 

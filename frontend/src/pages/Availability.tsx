@@ -1,17 +1,19 @@
 import { useState, useEffect } from "react";
 import { Clock, Check } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { request } from "../api/client";
 import type { AvailabilitySlot } from "../types";
 
 export default function Availability() {
+  const { t } = useTranslation();
   const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     request<{ data: AvailabilitySlot[] }>("/api/availability")
       .then(({ data }) => setSlots(data))
-      .catch(() => toast.error("Failed to load availability"));
+      .catch(() => toast.error(t("availability.subtitle")));
   }, []);
 
   const update = (day: string, field: keyof AvailabilitySlot, value: string | boolean) => {
@@ -27,19 +29,26 @@ export default function Availability() {
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch {
-      toast.error("Failed to save schedule");
+      toast.error(t("availability.saveSchedule"));
     }
   };
 
   const inputCls =
     "px-3 py-2 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed";
 
+  const totalHours = slots
+    .filter((s) => s.enabled)
+    .reduce((sum, s) => sum + calcHoursNum(s.start_time, s.end_time), 0)
+    .toFixed(1);
+
+  const workingDays = slots.filter((s) => s.enabled).length;
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-foreground">Availability</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Set your weekly working hours</p>
+          <h1 className="text-xl font-bold text-foreground">{t("availability.title")}</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">{t("availability.subtitle")}</p>
         </div>
         <button
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
@@ -51,10 +60,10 @@ export default function Availability() {
         >
           {saved ? (
             <>
-              <Check className="w-4 h-4" /> Saved!
+              <Check className="w-4 h-4" /> {t("availability.saved")}
             </>
           ) : (
-            "Save Schedule"
+            t("availability.saveSchedule")
           )}
         </button>
       </div>
@@ -62,10 +71,10 @@ export default function Availability() {
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="px-5 py-3 border-b border-border bg-muted/40">
           <div className="grid grid-cols-[120px_1fr_1fr_80px] gap-4">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Day</p>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Start Time</p>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">End Time</p>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Active</p>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("availability.columns.day")}</p>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("availability.columns.startTime")}</p>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("availability.columns.endTime")}</p>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("availability.columns.active")}</p>
           </div>
         </div>
 
@@ -73,9 +82,7 @@ export default function Availability() {
           {slots.map((slot) => (
             <div
               key={slot.day}
-              className={`px-5 py-4 transition-colors ${
-                slot.enabled ? "" : "opacity-50"
-              }`}
+              className={`px-5 py-4 transition-colors ${slot.enabled ? "" : "opacity-50"}`}
             >
               <div className="grid grid-cols-[120px_1fr_1fr_80px] gap-4 items-center">
                 <div className="flex items-center gap-2">
@@ -109,7 +116,7 @@ export default function Availability() {
                     aria-checked={slot.enabled}
                   >
                     <span
-                      className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                      className={`absolute top-0.5 start-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
                         slot.enabled ? "translate-x-5" : "translate-x-0"
                       }`}
                     />
@@ -118,8 +125,8 @@ export default function Availability() {
               </div>
 
               {slot.enabled && (
-                <p className="text-xs text-muted-foreground mt-1.5 pl-6">
-                  {calcHours(slot.start_time, slot.end_time)} working hours
+                <p className="text-xs text-muted-foreground mt-1.5 ps-6">
+                  {t("availability.workingHours", { hours: calcHours(slot.start_time, slot.end_time) })}
                 </p>
               )}
             </div>
@@ -128,18 +135,11 @@ export default function Availability() {
 
         <div className="px-5 py-4 border-t border-border bg-muted/20">
           <p className="text-sm text-muted-foreground">
-            Total:{" "}
+            {t("availability.total")}{" "}
             <span className="font-semibold text-foreground">
-              {slots
-                .filter((s) => s.enabled)
-                .reduce((sum, s) => sum + calcHoursNum(s.start_time, s.end_time), 0)
-                .toFixed(1)}{" "}
-              hours / week
+              {t("availability.hoursPerWeek", { hours: totalHours })}
             </span>{" "}
-            across{" "}
-            <span className="font-semibold text-foreground">
-              {slots.filter((s) => s.enabled).length} working days
-            </span>
+            {t("availability.workingDays", { count: workingDays })}
           </p>
         </div>
       </div>

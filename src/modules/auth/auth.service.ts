@@ -7,5 +7,15 @@ export async function login(email: string, password: string) {
     throw new Error(error?.message ?? "Login failed");
   }
 
-  return { accessToken: data.session.access_token, user: data.user };
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, role, full_name")
+    .eq("id", data.user.id)
+    .single();
+
+  if (profileError || !profile) {
+    throw new Error("No staff profile for this account");
+  }
+
+  return { accessToken: data.session.access_token, user: profile };
 }

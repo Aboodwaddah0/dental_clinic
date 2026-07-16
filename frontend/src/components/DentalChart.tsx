@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Plus, X, Clock } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { DentalRecord } from "../types";
+import { useAuth } from "../contexts/AuthContext";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Canvas constants
@@ -96,23 +98,18 @@ function primClass(l: string): TClass {
 
 interface TC { crown: string; root: string; border: string; glow: string }
 
+const STATUS_COLORS: Record<DentalRecord["status"], TC> = {
+  healthy:        { crown:"#FFFFFF",   root:"#FEF9F0", border:"#CBD5E1", glow:"#94A3B8" },
+  caries:         { crown:"#FCA5A5",   root:"#FFF1F2", border:"#EF4444", glow:"#F87171" },
+  needs_treatment:{ crown:"#FED7AA",   root:"#FFF7ED", border:"#EA580C", glow:"#FB923C" },
+  treated:        { crown:"#67E8F9",   root:"#ECFEFF", border:"#0891B2", glow:"#22D3EE" },
+  missing:        { crown:"#E2E8F0",   root:"#F8FAFC", border:"#94A3B8", glow:"#CBD5E1" },
+  extracted:      { crown:"#94A3B8",   root:"#E2E8F0", border:"#64748B", glow:"#94A3B8" },
+};
+
 function statusColors(recs: DentalRecord[]): TC {
-  if (!recs.length)
-    return { crown:"#FFFFFF", root:"#FEF9F0", border:"#CBD5E1", glow:"#94A3B8" };
-  const r = recs[recs.length - 1];
-  const c = r.condition.toLowerCase();
-  if (r.status === "extracted")
-    return { crown:"#94A3B8", root:"#E2E8F0", border:"#64748B", glow:"#94A3B8" };
-  if (r.status === "resolved") {
-    if (c.includes("crown") || c.includes("prosthetic"))
-      return { crown:"#FCD34D", root:"#FFFBEB", border:"#D97706", glow:"#FBBF24" };
-    if (c.includes("root canal") || c.includes("rct"))
-      return { crown:"#C4B5FD", root:"#F5F3FF", border:"#7C3AED", glow:"#A78BFA" };
-    if (c.includes("implant"))
-      return { crown:"#86EFAC", root:"#F0FDF4", border:"#16A34A", glow:"#4ADE80" };
-    return { crown:"#67E8F9", root:"#ECFEFF", border:"#0891B2", glow:"#22D3EE" };
-  }
-  return { crown:"#FCA5A5", root:"#FFF1F2", border:"#EF4444", glow:"#F87171" };
+  if (!recs.length) return STATUS_COLORS.healthy;
+  return STATUS_COLORS[recs[recs.length - 1].status] ?? STATUS_COLORS.healthy;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -279,13 +276,13 @@ function ToothItem({
 // Legend
 // ─────────────────────────────────────────────────────────────────────────────
 
-const LEGEND = [
-  { label:"Healthy",          crown:"#FFFFFF", border:"#CBD5E1" },
-  { label:"Active condition", crown:"#FCA5A5", border:"#EF4444" },
-  { label:"Treated",          crown:"#67E8F9", border:"#0891B2" },
-  { label:"Crown/Prosthetic", crown:"#FCD34D", border:"#D97706" },
-  { label:"Root Canal",       crown:"#C4B5FD", border:"#7C3AED" },
-  { label:"Extracted",        crown:"#94A3B8", border:"#64748B" },
+const LEGEND_COLORS = [
+  { key: "healthy",        crown:"#FFFFFF", border:"#CBD5E1" },
+  { key: "caries",         crown:"#FCA5A5", border:"#EF4444" },
+  { key: "needsTreatment", crown:"#FED7AA", border:"#EA580C" },
+  { key: "treated",        crown:"#67E8F9", border:"#0891B2" },
+  { key: "missing",        crown:"#E2E8F0", border:"#94A3B8" },
+  { key: "extracted",      crown:"#94A3B8", border:"#64748B" },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -303,6 +300,8 @@ interface Props {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function DentalChart({ records, onAddRecord, canCreate }: Props) {
+  const { user } = useAuth();
+  const { t } = useTranslation();
   const [mode, setMode] = useState<"permanent" | "primary">("permanent");
   const [selected, setSelected] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -358,7 +357,7 @@ export default function DentalChart({ records, onAddRecord, canCreate }: Props) 
                 : "border border-border text-muted-foreground hover:text-foreground"
             }`}
           >
-            {m === "permanent" ? "Permanent Teeth" : "Primary (Baby) Teeth"}
+            {m === "permanent" ? t("dentalChart.permanent") : t("dentalChart.primary")}
           </motion.button>
         ))}
       </div>
@@ -370,11 +369,11 @@ export default function DentalChart({ records, onAddRecord, canCreate }: Props) 
 
           {/* Legend */}
           <div className="flex flex-wrap gap-x-4 gap-y-1.5 mb-4">
-            {LEGEND.map(({ label, crown, border }) => (
-              <span key={label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            {LEGEND_COLORS.map(({ key, crown, border }) => (
+              <span key={key} className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span className="w-3 h-3 rounded-sm border flex-shrink-0"
                   style={{ background: crown, borderColor: border }} />
-                {label}
+                {t(`dentalChart.legend.${key}`)}
               </span>
             ))}
           </div>
@@ -413,13 +412,13 @@ export default function DentalChart({ records, onAddRecord, canCreate }: Props) 
                   />
 
                   {/* Quadrant labels */}
-                  <text x={10}      y={16} fontSize="9" fontWeight="600" fill="#94A3B8" letterSpacing="0.05em">UPPER RIGHT</text>
-                  <text x={CW - 10} y={16} fontSize="9" fontWeight="600" fill="#94A3B8" letterSpacing="0.05em" textAnchor="end">UPPER LEFT</text>
-                  <text x={10}      y={CH - 6} fontSize="9" fontWeight="600" fill="#94A3B8" letterSpacing="0.05em">LOWER RIGHT</text>
-                  <text x={CW - 10} y={CH - 6} fontSize="9" fontWeight="600" fill="#94A3B8" letterSpacing="0.05em" textAnchor="end">LOWER LEFT</text>
+                  <text x={10}      y={16} fontSize="9" fontWeight="600" fill="#94A3B8" letterSpacing="0.05em">{t("dentalChart.quadrant.upperRight")}</text>
+                  <text x={CW - 10} y={16} fontSize="9" fontWeight="600" fill="#94A3B8" letterSpacing="0.05em" textAnchor="end">{t("dentalChart.quadrant.upperLeft")}</text>
+                  <text x={10}      y={CH - 6} fontSize="9" fontWeight="600" fill="#94A3B8" letterSpacing="0.05em">{t("dentalChart.quadrant.lowerRight")}</text>
+                  <text x={CW - 10} y={CH - 6} fontSize="9" fontWeight="600" fill="#94A3B8" letterSpacing="0.05em" textAnchor="end">{t("dentalChart.quadrant.lowerLeft")}</text>
 
                   {/* Occlusal plane label */}
-                  <text x={CW / 2} y={CH / 2 - 4} fontSize="8" fill="#CBD5E1" textAnchor="middle" letterSpacing="0.08em">OCCLUSAL PLANE</text>
+                  <text x={CW / 2} y={CH / 2 - 4} fontSize="8" fill="#CBD5E1" textAnchor="middle" letterSpacing="0.08em">{t("dentalChart.quadrant.occlusal")}</text>
                 </svg>
 
                 {/* ── Upper arch teeth ── */}
@@ -491,7 +490,9 @@ export default function DentalChart({ records, onAddRecord, canCreate }: Props) 
                     <path d="M10,35 L10,62 C10,66 12,70 18,70 C24,70 26,66 26,62 L26,35 Z" fill="#CBD5E1" />
                   </svg>
                   <p className="text-sm text-muted-foreground">
-                    Select a tooth to view<br />its condition history
+                    {t("dentalChart.selectToothHint").split("\n").map((line, i) => (
+                      <span key={i}>{line}{i === 0 && <br />}</span>
+                    ))}
                   </p>
                 </div>
               </motion.div>
@@ -508,7 +509,7 @@ export default function DentalChart({ records, onAddRecord, canCreate }: Props) 
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <p className="font-bold text-foreground text-lg leading-none">
-                      Tooth {isPerm ? selected : numToLetter(selected)}
+                      {t("dentalChart.tooth")} {isPerm ? selected : numToLetter(selected)}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1 leading-snug max-w-[180px]">
                       {toothName(selected)}
@@ -533,11 +534,11 @@ export default function DentalChart({ records, onAddRecord, canCreate }: Props) 
 
                 {/* History */}
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                  History
+                  {t("dentalChart.history")}
                 </p>
                 <div className="mb-4 flex-1 overflow-y-auto">
                   {selectedRecs.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No records yet.</p>
+                    <p className="text-sm text-muted-foreground">{t("dentalChart.noRecords")}</p>
                   ) : (
                     <div className="space-y-3">
                       {selectedRecs.map((r, i) => (
@@ -584,13 +585,14 @@ export default function DentalChart({ records, onAddRecord, canCreate }: Props) 
                     className="flex items-center gap-2 w-full justify-center border border-dashed border-primary/40 hover:border-primary text-primary text-sm font-medium py-2.5 rounded-lg transition-colors"
                     onClick={() => setShowForm(true)}
                   >
-                    <Plus className="w-4 h-4" /> Add Condition
+                    <Plus className="w-4 h-4" /> {t("dentalChart.addCondition")}
                   </motion.button>
                 )}
 
                 {showForm && (
                   <AddRecordForm
                     toothNumber={selected}
+                    doctorName={user?.full_name ?? ""}
                     onSave={(r) => { onAddRecord(r); setShowForm(false); }}
                     onCancel={() => setShowForm(false)}
                   />
@@ -628,15 +630,21 @@ function MiniTooth({ tc, upper, colors }: { tc: TClass; upper: boolean; colors: 
 // Status pill
 // ─────────────────────────────────────────────────────────────────────────────
 
+const STATUS_PILL_CLS: Record<DentalRecord["status"], string> = {
+  healthy:         "text-emerald-700 bg-emerald-50 border border-emerald-200",
+  caries:          "text-red-700 bg-red-50 border border-red-200",
+  needs_treatment: "text-orange-700 bg-orange-50 border border-orange-200",
+  treated:         "text-cyan-700 bg-cyan-50 border border-cyan-200",
+  missing:         "text-slate-500 bg-slate-100 border border-slate-200",
+  extracted:       "text-slate-600 bg-slate-100 border border-slate-200",
+};
+
 function StatusPill({ status }: { status: DentalRecord["status"] }) {
-  const map = {
-    active:    "text-red-700 bg-red-50 border border-red-200",
-    resolved:  "text-cyan-700 bg-cyan-50 border border-cyan-200",
-    extracted: "text-slate-600 bg-slate-100 border border-slate-200",
-  };
+  const { t } = useTranslation();
+  const cls = STATUS_PILL_CLS[status] ?? STATUS_PILL_CLS.healthy;
   return (
-    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide ${map[status]}`}>
-      {status}
+    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide ${cls}`}>
+      {t(`dentalChart.status.${status}`)}
     </span>
   );
 }
@@ -646,17 +654,19 @@ function StatusPill({ status }: { status: DentalRecord["status"] }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function AddRecordForm({
-  toothNumber, onSave, onCancel,
+  toothNumber, doctorName, onSave, onCancel,
 }: {
   toothNumber: number;
+  doctorName: string;
   onSave: (r: Omit<DentalRecord, "id" | "patient_id">) => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const [form, setForm] = useState({
     condition: "", description: "", treatment: "",
-    status: "active" as DentalRecord["status"],
+    status: "caries" as DentalRecord["status"],
     date: new Date().toISOString().split("T")[0],
-    doctor: "Dr. Sarah Mitchell",
+    doctor: doctorName,
   });
 
   const inp = "w-full px-3 py-2 bg-background border border-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-ring";
@@ -668,49 +678,49 @@ function AddRecordForm({
       onSubmit={(e) => { e.preventDefault(); onSave({ ...form, tooth_number: toothNumber }); }}
       className="border border-border rounded-lg p-4 space-y-3 bg-muted/30"
     >
-      <p className="text-xs font-semibold text-foreground">New Record — Tooth {toothNumber}</p>
+      <p className="text-xs font-semibold text-foreground">{t("dentalChart.newRecord", { number: toothNumber })}</p>
 
       <div>
         <label className="block text-xs text-muted-foreground mb-1">
-          Condition <span className="text-destructive">*</span>
+          {t("dentalChart.form.condition")} <span className="text-destructive">*</span>
         </label>
         <input required className={inp} value={form.condition}
           onChange={e => setForm(f => ({ ...f, condition: e.target.value }))}
-          placeholder="e.g. Dental caries" />
+          placeholder={t("dentalChart.form.conditionPlaceholder")} />
       </div>
 
       <div>
-        <label className="block text-xs text-muted-foreground mb-1">Description</label>
+        <label className="block text-xs text-muted-foreground mb-1">{t("dentalChart.form.description")}</label>
         <textarea className={`${inp} resize-none`} rows={2} value={form.description}
           onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-          placeholder="Clinical details…" />
+          placeholder={t("dentalChart.form.descriptionPlaceholder")} />
       </div>
 
       <div>
-        <label className="block text-xs text-muted-foreground mb-1">Treatment</label>
+        <label className="block text-xs text-muted-foreground mb-1">{t("dentalChart.form.treatment")}</label>
         <input className={inp} value={form.treatment}
           onChange={e => setForm(f => ({ ...f, treatment: e.target.value }))}
-          placeholder="Treatment performed…" />
+          placeholder={t("dentalChart.form.treatmentPlaceholder")} />
       </div>
 
       <div>
-        <label className="block text-xs text-muted-foreground mb-1">Status</label>
+        <label className="block text-xs text-muted-foreground mb-1">{t("dentalChart.form.status")}</label>
         <select className={inp} value={form.status}
           onChange={e => setForm(f => ({ ...f, status: e.target.value as DentalRecord["status"] }))}>
-          <option value="active">Active</option>
-          <option value="resolved">Resolved</option>
-          <option value="extracted">Extracted</option>
+          {(["healthy","caries","needs_treatment","treated","missing","extracted"] as DentalRecord["status"][]).map(s => (
+            <option key={s} value={s}>{t(`dentalChart.status.${s}`)}</option>
+          ))}
         </select>
       </div>
 
       <div className="flex gap-2 pt-1">
         <button type="button" onClick={onCancel}
           className="flex-1 px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors">
-          Cancel
+          {t("common.cancel")}
         </button>
         <button type="submit"
           className="flex-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors">
-          Save
+          {t("dentalChart.form.save")}
         </button>
       </div>
     </motion.form>

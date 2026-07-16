@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function Settings() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({
     full_name: user?.full_name ?? "",
@@ -23,36 +25,36 @@ export default function Settings() {
 
   return (
     <div className="p-6 max-w-2xl">
-      <h1 className="text-xl font-bold text-foreground mb-6">Settings</h1>
+      <h1 className="text-xl font-bold text-foreground mb-6">{t("settings.title")}</h1>
 
       <form onSubmit={handleSave} className="space-y-5">
         <section className="bg-card rounded-xl border border-border p-5">
-          <h2 className="font-semibold text-foreground mb-4">Profile</h2>
+          <h2 className="font-semibold text-foreground mb-4">{t("settings.profile")}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1.5">Full Name</label>
+              <label className="block text-sm font-medium mb-1.5">{t("settings.fullName")}</label>
               <input className={inputCls} value={form.full_name} onChange={(e) => setForm((f) => ({ ...f, full_name: e.target.value }))} />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1.5">Email</label>
+              <label className="block text-sm font-medium mb-1.5">{t("settings.email")}</label>
               <input type="email" className={inputCls} value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
             </div>
           </div>
         </section>
 
         <section className="bg-card rounded-xl border border-border p-5">
-          <h2 className="font-semibold text-foreground mb-4">Clinic Information</h2>
+          <h2 className="font-semibold text-foreground mb-4">{t("settings.clinicInfo")}</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1.5">Clinic Name</label>
+              <label className="block text-sm font-medium mb-1.5">{t("settings.clinicName")}</label>
               <input className={inputCls} value={form.clinic_name} onChange={(e) => setForm((f) => ({ ...f, clinic_name: e.target.value }))} />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1.5">Address</label>
+              <label className="block text-sm font-medium mb-1.5">{t("settings.address")}</label>
               <input className={inputCls} value={form.clinic_address} onChange={(e) => setForm((f) => ({ ...f, clinic_address: e.target.value }))} />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1.5">Phone</label>
+              <label className="block text-sm font-medium mb-1.5">{t("settings.phone")}</label>
               <input className={inputCls} value={form.clinic_phone} onChange={(e) => setForm((f) => ({ ...f, clinic_phone: e.target.value }))} />
             </div>
           </div>
@@ -62,7 +64,7 @@ export default function Settings() {
           type="submit"
           className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-colors ${saved ? "bg-emerald-600 text-white" : "bg-primary hover:bg-primary/90 text-primary-foreground"}`}
         >
-          {saved ? <><Check className="w-4 h-4" /> Saved!</> : "Save Changes"}
+          {saved ? <><Check className="w-4 h-4" /> {t("settings.saved")}</> : t("settings.saveChanges")}
         </button>
       </form>
     </div>

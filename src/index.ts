@@ -9,6 +9,8 @@ import { appointmentsRouter } from "./modules/appointments/appointments.routes.j
 import { visitsRouter } from "./modules/visits/visits.routes.js";
 import { patientFilesRouter } from "./modules/patient_files/patient_files.routes.js";
 import { invoicesRouter } from "./modules/invoices/invoices.routes.js";
+import { dentalRecordsRouter } from "./modules/dental-records/dental-records.routes.js";
+import { reportsRouter } from "./modules/reports/reports.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -41,6 +43,8 @@ app.use("/api/appointments", appointmentsRouter);
 app.use("/api/visits", visitsRouter);
 app.use("/api/patient-files", patientFilesRouter);
 app.use("/api/invoices", invoicesRouter);
+app.use("/api/dental-records", dentalRecordsRouter);
+app.use("/api/reports", reportsRouter);
 
 
 app.use(errorHandler);

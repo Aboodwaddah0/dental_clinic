@@ -21,6 +21,7 @@ import {
   Image as ImageIcon,
   Scan,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { Patient, Visit, DentalRecord, PatientFile, Invoice, Payment, Appointment } from "../types";
 import { useAuth } from "../contexts/AuthContext";
 import { getPatient, deletePatient } from "../api/patients";
@@ -29,6 +30,7 @@ import { listVisits, createVisit } from "../api/visits";
 import { listDentalRecords, createDentalRecord } from "../api/dentalRecords";
 import { listPatientFiles, deletePatientFile, uploadPatientFile } from "../api/patientFiles";
 import { listInvoices, addPayment } from "../api/invoices";
+import { formatCurrency } from "../lib/format";
 import PatientForm from "../components/PatientForm";
 import DentalChart from "../components/DentalChart";
 import { Skeleton } from "../app/components/ui/skeleton";
@@ -56,6 +58,8 @@ type Tab = "profile" | "appointments" | "visits" | "dental" | "files" | "billing
 export default function PatientDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
+  const isAr = i18n.language === "ar";
   const { canCreate, canEdit, canDelete, isLoading: authLoading } = useAuth();
 
   const [patient, setPatient] = useState<Patient | null>(null);
@@ -212,21 +216,21 @@ export default function PatientDetail() {
   if (notFound || !patient) {
     return (
       <div className="p-6 text-center text-muted-foreground">
-        Patient not found.{" "}
+        {t("patientDetail.notFound")}{" "}
         <button className="text-primary hover:underline" onClick={() => navigate("/patients")}>
-          Back to patients
+          {t("patientDetail.backToPatients")}
         </button>
       </div>
     );
   }
 
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
-    { id: "profile", label: "Profile", icon: User },
-    { id: "appointments", label: "Appointments", icon: CalendarDays },
-    { id: "visits", label: "Visits", icon: Activity },
-    { id: "dental", label: "Dental Chart", icon: Smile },
-    { id: "files", label: "Files", icon: FolderOpen },
-    { id: "billing", label: "Billing", icon: CreditCard },
+    { id: "profile", label: t("patientDetail.tabs.profile"), icon: User },
+    { id: "appointments", label: t("patientDetail.tabs.appointments"), icon: CalendarDays },
+    { id: "visits", label: t("patientDetail.tabs.visits"), icon: Activity },
+    { id: "dental", label: t("patientDetail.tabs.dental"), icon: Smile },
+    { id: "files", label: t("patientDetail.tabs.files"), icon: FolderOpen },
+    { id: "billing", label: t("patientDetail.tabs.billing"), icon: CreditCard },
   ];
 
   return (
@@ -236,7 +240,7 @@ export default function PatientDetail() {
           <BreadcrumbList>
             <BreadcrumbItem>
               <BreadcrumbLink href="/patients" onClick={(e) => { e.preventDefault(); navigate("/patients"); }}>
-                Patients
+                {t("patientDetail.breadcrumb")}
               </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
@@ -252,7 +256,7 @@ export default function PatientDetail() {
           <div>
             <h1 className="text-xl font-semibold text-foreground">{patient.full_name}</h1>
             <p className="text-sm text-muted-foreground">
-              {patient.phone} · Added {formatDate(patient.created_at)}
+              {patient.phone} · {t("patientDetail.added", { date: formatDate(patient.created_at, isAr) })}
             </p>
           </div>
         </div>
@@ -329,9 +333,9 @@ export default function PatientDetail() {
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Patient</AlertDialogTitle>
+            <AlertDialogTitle>{t("patients.delete.title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong className="text-foreground">{patient.full_name}</strong>? This action cannot be undone.
+              {t("patients.delete.description", { name: patient.full_name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -365,42 +369,44 @@ function ProfileTab({
 }: {
   patient: Patient; invoices: Invoice[]; onEdit: () => void; canEdit: boolean; canDelete: boolean; onDelete: () => void;
 }) {
+  const { t, i18n } = useTranslation();
+  const isAr = i18n.language === "ar";
   const totalBilled = invoices.reduce((s, i) => s + Number(i.total_amount), 0);
   const totalPaid = invoices.reduce((s, i) => s + Number(i.paid_amount), 0);
   const remaining = totalBilled - totalPaid;
 
   const rows = [
-    { label: "Full Name", value: patient.full_name },
-    { label: "Phone", value: patient.phone },
-    { label: "Date of Birth", value: patient.date_of_birth ? formatDate(patient.date_of_birth) : null },
-    { label: "Gender", value: patient.gender, capitalize: true },
-    { label: "Blood Type", value: patient.blood_type },
-    { label: "Address", value: patient.address },
+    { label: t("patientDetail.profile.fullName"), value: patient.full_name },
+    { label: t("patientDetail.profile.phone"), value: patient.phone },
+    { label: t("patientDetail.profile.dateOfBirth"), value: patient.date_of_birth ? formatDate(patient.date_of_birth, isAr) : null },
+    { label: t("patientDetail.profile.gender"), value: patient.gender ? t(`patients.form.${patient.gender}`) : null },
+    { label: t("patientDetail.profile.bloodType"), value: patient.blood_type },
+    { label: t("patientDetail.profile.address"), value: patient.address },
   ];
 
   return (
     <div className="space-y-4">
       <div className="bg-card rounded-xl border border-border p-6">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="font-semibold text-foreground">Patient Information</h3>
+          <h3 className="font-semibold text-foreground">{t("patientDetail.profile.title")}</h3>
           <div className="flex items-center gap-3">
             {canEdit && (
               <button className="flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 font-medium transition-colors" onClick={onEdit}>
-                <Pencil className="w-4 h-4" /> Edit
+                <Pencil className="w-4 h-4" /> {t("common.edit")}
               </button>
             )}
             {canDelete && (
               <button className="flex items-center gap-1.5 text-sm text-destructive hover:text-destructive/80 font-medium transition-colors" onClick={onDelete}>
-                <Trash2 className="w-4 h-4" /> Delete
+                <Trash2 className="w-4 h-4" /> {t("common.delete")}
               </button>
             )}
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
-          {rows.map(({ label, value, capitalize }) => (
+          {rows.map(({ label, value }) => (
             <div key={label}>
               <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">{label}</p>
-              <p className={`text-sm font-medium text-foreground ${capitalize ? "capitalize" : ""}`}>{value || "—"}</p>
+              <p className="text-sm font-medium text-foreground">{value || "—"}</p>
             </div>
           ))}
         </div>
@@ -409,17 +415,17 @@ function ProfileTab({
       {invoices.length > 0 && (
         <div className="grid grid-cols-3 gap-4">
           <div className="bg-card rounded-xl border border-border p-5">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Total Billed</p>
-            <p className="text-lg font-bold text-foreground">${totalBilled.toLocaleString()}</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">{t("patientDetail.profile.totalBilled")}</p>
+            <p className="text-lg font-bold text-foreground">{formatCurrency(totalBilled)}</p>
           </div>
           <div className="bg-card rounded-xl border border-border p-5">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Total Paid</p>
-            <p className="text-lg font-bold text-emerald-600">${totalPaid.toLocaleString()}</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">{t("patientDetail.profile.totalPaid")}</p>
+            <p className="text-lg font-bold text-emerald-600">{formatCurrency(totalPaid)}</p>
           </div>
           <div className={`rounded-xl border p-5 ${remaining > 0 ? "bg-amber-50 border-amber-200" : "bg-card border-border"}`}>
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Remaining</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">{t("patientDetail.profile.remaining")}</p>
             <p className={`text-lg font-bold ${remaining > 0 ? "text-amber-600" : "text-muted-foreground"}`}>
-              ${remaining.toLocaleString()}
+              {formatCurrency(remaining)}
             </p>
           </div>
         </div>
@@ -427,12 +433,12 @@ function ProfileTab({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-card rounded-xl border border-border p-5">
-          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-2">Allergies</p>
-          <p className="text-sm text-foreground">{patient.allergies || "None known"}</p>
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-2">{t("patientDetail.profile.allergies")}</p>
+          <p className="text-sm text-foreground">{patient.allergies || t("patientDetail.profile.noAllergies")}</p>
         </div>
         <div className="bg-card rounded-xl border border-border p-5">
-          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-2">Medical Notes</p>
-          <p className="text-sm text-foreground leading-relaxed">{patient.medical_notes || "No notes recorded."}</p>
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-2">{t("patientDetail.profile.medicalNotes")}</p>
+          <p className="text-sm text-foreground leading-relaxed">{patient.medical_notes || t("patientDetail.profile.noNotes")}</p>
         </div>
       </div>
     </div>
@@ -441,10 +447,13 @@ function ProfileTab({
 
 // ─── Appointments Tab ─────────────────────────────────────────────────────────
 function AppointmentsTab({ appointments }: { appointments: Appointment[] }) {
+  const { t, i18n } = useTranslation();
+  const isAr = i18n.language === "ar";
+
   if (appointments.length === 0) {
     return (
       <div className="bg-card rounded-xl border border-border p-10 text-center text-muted-foreground text-sm">
-        No appointments recorded for this patient.
+        {t("patientDetail.appointments.noAppointments")}
       </div>
     );
   }
@@ -454,15 +463,15 @@ function AppointmentsTab({ appointments }: { appointments: Appointment[] }) {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border bg-muted/40">
-            {["Date", "Time", "Status", "Notes"].map((h) => (
-              <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>
+            {[t("patientDetail.appointments.date"), t("patientDetail.appointments.time"), t("patientDetail.appointments.status"), t("patientDetail.appointments.notes")].map((h) => (
+              <th key={h} className="text-start px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>
             ))}
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
           {appointments.map((a) => (
             <tr key={a.id} className="hover:bg-muted/30 transition-colors">
-              <td className="px-5 py-3.5 font-medium">{formatDate(a.appointment_date)}</td>
+              <td className="px-5 py-3.5 font-medium">{formatDate(a.appointment_date, isAr)}</td>
               <td className="px-5 py-3.5 text-muted-foreground">{a.start_time} – {a.end_time}</td>
               <td className="px-5 py-3.5"><ApptStatusBadge status={a.status} /></td>
               <td className="px-5 py-3.5 text-muted-foreground">{a.notes || "—"}</td>
@@ -484,6 +493,8 @@ function VisitsTab({
   showForm: boolean;
   setShowForm: (v: boolean) => void;
 }) {
+  const { t, i18n } = useTranslation();
+  const isAr = i18n.language === "ar";
   const [form, setForm] = useState({ diagnosis: "", treatment: "", notes: "" });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -500,42 +511,42 @@ function VisitsTab({
             className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
             onClick={() => setShowForm(!showForm)}
           >
-            <Plus className="w-4 h-4" /> Add Visit
+            <Plus className="w-4 h-4" /> {t("patientDetail.visits.addVisit")}
           </button>
         </div>
       )}
 
       {showForm && (
         <div className="bg-card rounded-xl border border-border p-5">
-          <h3 className="font-semibold text-foreground mb-4">Record New Visit</h3>
+          <h3 className="font-semibold text-foreground mb-4">{t("patientDetail.visits.recordTitle")}</h3>
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">
-                Diagnosis <span className="text-destructive">*</span>
+                {t("patientDetail.visits.diagnosis")} <span className="text-destructive">*</span>
               </label>
               <input required className={inputCls} value={form.diagnosis}
                 onChange={(e) => setForm((f) => ({ ...f, diagnosis: e.target.value }))}
-                placeholder="Primary diagnosis…" />
+                placeholder={t("patientDetail.visits.diagnosisPlaceholder")} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Treatment</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">{t("patientDetail.visits.treatment")}</label>
               <input className={inputCls} value={form.treatment}
                 onChange={(e) => setForm((f) => ({ ...f, treatment: e.target.value }))}
-                placeholder="Treatment performed…" />
+                placeholder={t("patientDetail.visits.treatmentPlaceholder")} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Notes</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">{t("patientDetail.visits.notes")}</label>
               <textarea className={`${inputCls} resize-none`} rows={2} value={form.notes}
                 onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                placeholder="Additional notes…" />
+                placeholder={t("patientDetail.visits.notesPlaceholder")} />
             </div>
             <div className="flex gap-3 pt-1">
               <button type="button" className="px-4 py-2 rounded-lg border border-border text-sm font-medium hover:bg-muted transition-colors"
                 onClick={() => setShowForm(false)}>
-                Cancel
+                {t("common.cancel")}
               </button>
               <button type="submit" className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors">
-                Save Visit
+                {t("patientDetail.visits.saveVisit")}
               </button>
             </div>
           </form>
@@ -544,7 +555,7 @@ function VisitsTab({
 
       {visits.length === 0 && !showForm ? (
         <div className="bg-card rounded-xl border border-border p-10 text-center text-muted-foreground text-sm">
-          No visits recorded yet.
+          {t("patientDetail.visits.noVisits")}
         </div>
       ) : (
         <div className="space-y-3">
@@ -554,19 +565,19 @@ function VisitsTab({
                 <div>
                   <p className="font-semibold text-foreground">{v.diagnosis}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {formatDate(v.date)} · {v.doctor}
+                    {formatDate(v.date, isAr)} · {v.doctor}
                   </p>
                 </div>
               </div>
               {v.treatment && (
                 <div className="mt-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Treatment</p>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">{t("patientDetail.visits.treatment")}</p>
                   <p className="text-sm text-foreground">{v.treatment}</p>
                 </div>
               )}
               {v.notes && (
                 <div className="mt-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Notes</p>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">{t("patientDetail.visits.notes")}</p>
                   <p className="text-sm text-muted-foreground">{v.notes}</p>
                 </div>
               )}
@@ -588,6 +599,7 @@ function FilesTab({
   onDelete: (id: string) => void;
   onPreview: (f: PatientFile) => void;
 }) {
+  const { t, i18n } = useTranslation();
   const [showForm, setShowForm] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState({ file_type: "image" as "xray" | "image" | "pdf", description: "" });
@@ -618,17 +630,17 @@ function FilesTab({
             className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
             onClick={() => setShowForm(!showForm)}
           >
-            <Plus className="w-4 h-4" /> Upload File
+            <Plus className="w-4 h-4" /> {t("patientDetail.files.uploadFile")}
           </button>
         </div>
       )}
 
       {showForm && (
         <div className="bg-card rounded-xl border border-border p-5">
-          <h3 className="font-semibold text-foreground mb-4">Upload File</h3>
+          <h3 className="font-semibold text-foreground mb-4">{t("patientDetail.files.uploadFile")}</h3>
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">File</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">{t("patientDetail.files.file")}</label>
               <input
                 type="file"
                 required
@@ -638,26 +650,26 @@ function FilesTab({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Type</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">{t("patientDetail.files.type")}</label>
               <select className={inputCls} value={form.file_type} onChange={(e) => setForm((f) => ({ ...f, file_type: e.target.value as "xray" | "image" | "pdf" }))}>
-                <option value="image">Image</option>
-                <option value="xray">X-Ray</option>
-                <option value="pdf">PDF</option>
+                <option value="image">{t("patientDetail.files.typeImage")}</option>
+                <option value="xray">{t("patientDetail.files.typeXray")}</option>
+                <option value="pdf">{t("patientDetail.files.typePdf")}</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Description</label>
-              <input className={inputCls} value={form.description} placeholder="Brief description…"
+              <label className="block text-xs font-medium text-muted-foreground mb-1">{t("patientDetail.files.description")}</label>
+              <input className={inputCls} value={form.description} placeholder={t("patientDetail.files.descriptionPlaceholder")}
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
             </div>
             <div className="flex gap-2 pt-1">
               <button type="submit" disabled={uploading || !selectedFile}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50">
-                {uploading ? "Uploading…" : "Upload"}
+                {uploading ? t("patientDetail.files.uploading") : t("patientDetail.files.upload")}
               </button>
               <button type="button" onClick={() => setShowForm(false)}
                 className="px-4 py-2 rounded-lg text-sm border border-border hover:bg-muted transition-colors">
-                Cancel
+                {t("common.cancel")}
               </button>
             </div>
           </form>
@@ -666,7 +678,7 @@ function FilesTab({
 
       {files.length === 0 ? (
         <div className="bg-card rounded-xl border border-border p-10 text-center text-muted-foreground text-sm">
-          No files uploaded.
+          {t("patientDetail.files.noFiles")}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -679,7 +691,7 @@ function FilesTab({
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                     <button className="bg-white text-foreground rounded-lg px-3 py-1.5 text-xs font-medium shadow"
                       onClick={() => onPreview(f)}>
-                      Preview
+                      {t("patientDetail.files.preview")}
                     </button>
                   </div>
                 </div>
@@ -694,7 +706,7 @@ function FilesTab({
                     {fileIcon(f.file_type)}
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{f.description}</p>
-                      <p className="text-xs text-muted-foreground">{formatDate(f.created_at)}</p>
+                      <p className="text-xs text-muted-foreground">{formatDate(f.created_at, i18n.language === "ar")}</p>
                     </div>
                   </div>
                   <div className="flex gap-1 flex-shrink-0">
@@ -729,13 +741,15 @@ function BillingTab({
   onAddPayment: (id: string) => void;
   canCreate: boolean;
 }) {
+  const { t, i18n } = useTranslation();
+  const isAr = i18n.language === "ar";
   const [expanded, setExpanded] = useState<string | null>(null);
 
   return (
     <div className="space-y-3">
       {invoices.length === 0 ? (
         <div className="bg-card rounded-xl border border-border p-10 text-center text-muted-foreground text-sm">
-          No invoices found.
+          {t("patientDetail.billing.noInvoices")}
         </div>
       ) : (
         invoices.map((inv) => {
@@ -749,21 +763,21 @@ function BillingTab({
               >
                 <div className="flex-1 min-w-0 grid grid-cols-2 sm:grid-cols-4 gap-4">
                   <div>
-                    <p className="text-xs text-muted-foreground">Invoice</p>
+                    <p className="text-xs text-muted-foreground">{t("patientDetail.billing.invoice")}</p>
                     <p className="text-sm font-semibold text-foreground">{inv.id.slice(0, 8).toUpperCase()}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Total</p>
-                    <p className="text-sm font-semibold">${inv.total_amount.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">{t("patientDetail.billing.total")}</p>
+                    <p className="text-sm font-semibold">{formatCurrency(inv.total_amount)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Paid</p>
-                    <p className="text-sm font-semibold text-emerald-600">${inv.paid_amount.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">{t("patientDetail.billing.paid")}</p>
+                    <p className="text-sm font-semibold text-emerald-600">{formatCurrency(inv.paid_amount)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Remaining</p>
+                    <p className="text-xs text-muted-foreground">{t("patientDetail.billing.remaining")}</p>
                     <p className={`text-sm font-semibold ${remaining > 0 ? "text-amber-600" : "text-muted-foreground"}`}>
-                      ${remaining.toLocaleString()}
+                      {formatCurrency(remaining)}
                     </p>
                   </div>
                 </div>
@@ -773,33 +787,33 @@ function BillingTab({
               {isOpen && (
                 <div className="border-t border-border px-5 py-4">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold text-foreground">Payment History</h4>
+                    <h4 className="text-sm font-semibold text-foreground">{t("patientDetail.billing.paymentHistory")}</h4>
                     {canCreate && remaining > 0 && (
                       <button
                         className="flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 font-medium transition-colors"
                         onClick={(e) => { e.stopPropagation(); onAddPayment(inv.id); }}
                       >
-                        <Plus className="w-4 h-4" /> Add Payment
+                        <Plus className="w-4 h-4" /> {t("patientDetail.billing.addPayment")}
                       </button>
                     )}
                   </div>
                   {inv.payments.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No payments recorded.</p>
+                    <p className="text-sm text-muted-foreground">{t("patientDetail.billing.noPayments")}</p>
                   ) : (
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-border">
-                          {["Amount", "Method", "Date", "Received By"].map((h) => (
-                            <th key={h} className="text-left pb-2 text-xs font-medium text-muted-foreground">{h}</th>
+                          {[t("patientDetail.billing.colAmount"), t("patientDetail.billing.colMethod"), t("patientDetail.billing.colDate"), t("patientDetail.billing.colReceivedBy")].map((h) => (
+                            <th key={h} className="text-start pb-2 text-xs font-medium text-muted-foreground">{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
                         {inv.payments.map((p) => (
                           <tr key={p.id}>
-                            <td className="py-2 font-semibold text-emerald-600">${p.amount.toLocaleString()}</td>
-                            <td className="py-2 capitalize text-muted-foreground">{p.payment_method}</td>
-                            <td className="py-2 text-muted-foreground">{formatDate(p.payment_date)}</td>
+                            <td className="py-2 font-semibold text-emerald-600">{formatCurrency(p.amount)}</td>
+                            <td className="py-2 capitalize text-muted-foreground">{t(`common.paymentMethod.${p.payment_method}`)}</td>
+                            <td className="py-2 text-muted-foreground">{formatDate(p.payment_date, isAr)}</td>
                             <td className="py-2 text-muted-foreground">{p.received_by}</td>
                           </tr>
                         ))}
@@ -824,6 +838,7 @@ function PaymentModal({
   onClose: () => void;
   onSave: (amount: number, method: "cash" | "card" | "transfer") => void;
 }) {
+  const { t } = useTranslation();
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<Payment["payment_method"]>("cash");
 
@@ -836,32 +851,32 @@ function PaymentModal({
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
       <div className="bg-card rounded-xl border border-border shadow-xl w-full max-w-sm">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <h3 className="font-semibold text-foreground">Add Payment — {invoiceId.slice(0, 8).toUpperCase()}</h3>
+          <h3 className="font-semibold text-foreground">{t("patientDetail.billing.addPayment")} — {invoiceId.slice(0, 8).toUpperCase()}</h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
         </div>
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1.5">Amount ($) <span className="text-destructive">*</span></label>
+            <label className="block text-sm font-medium mb-1.5">{t("patientDetail.billing.amount")} <span className="text-destructive">*</span></label>
             <input required type="number" min="1" step="0.01" className={inputCls}
               value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1.5">Payment Method</label>
+            <label className="block text-sm font-medium mb-1.5">{t("patientDetail.billing.paymentMethod")}</label>
             <select className={inputCls} value={method}
               onChange={(e) => setMethod(e.target.value as Payment["payment_method"])}>
-              <option value="cash">Cash</option>
-              <option value="card">Card</option>
-              <option value="transfer">Transfer</option>
+              <option value="cash">{t("common.paymentMethod.cash")}</option>
+              <option value="card">{t("common.paymentMethod.card")}</option>
+              <option value="transfer">{t("common.paymentMethod.transfer")}</option>
             </select>
           </div>
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose}
               className="flex-1 px-4 py-2.5 rounded-lg border border-border text-sm font-medium hover:bg-muted transition-colors">
-              Cancel
+              {t("common.cancel")}
             </button>
             <button type="submit"
               className="flex-1 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors">
-              Record Payment
+              {t("patientDetail.billing.recordPayment")}
             </button>
           </div>
         </form>
@@ -887,21 +902,23 @@ function FilePreviewModal({ file, onClose }: { file: PatientFile; onClose: () =>
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function ApptStatusBadge({ status }: { status: string }) {
+  const { t } = useTranslation();
   if (status === "completed")
-    return <span className="flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-medium"><CheckCircle2 className="w-3 h-3" /> Completed</span>;
+    return <span className="flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-medium"><CheckCircle2 className="w-3 h-3" /> {t("common.status.completed")}</span>;
   if (status === "cancelled")
-    return <span className="flex items-center gap-1 text-xs text-red-600 bg-red-50 px-2 py-0.5 rounded-full font-medium"><XCircle className="w-3 h-3" /> Cancelled</span>;
-  return <span className="flex items-center gap-1 text-xs text-primary bg-secondary px-2 py-0.5 rounded-full font-medium"><Circle className="w-3 h-3" /> Scheduled</span>;
+    return <span className="flex items-center gap-1 text-xs text-red-600 bg-red-50 px-2 py-0.5 rounded-full font-medium"><XCircle className="w-3 h-3" /> {t("common.status.cancelled")}</span>;
+  return <span className="flex items-center gap-1 text-xs text-primary bg-secondary px-2 py-0.5 rounded-full font-medium"><Circle className="w-3 h-3" /> {t("common.status.scheduled")}</span>;
 }
 
 function InvoiceStatusBadge({ status }: { status: string }) {
-  if (status === "paid") return <span className="text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full font-semibold">Paid</span>;
-  if (status === "partially_paid") return <span className="text-xs text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full font-semibold">Partial</span>;
-  return <span className="text-xs text-red-600 bg-red-50 px-2.5 py-1 rounded-full font-semibold">Unpaid</span>;
+  const { t } = useTranslation();
+  if (status === "paid") return <span className="text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full font-semibold">{t("common.invoiceStatus.paid")}</span>;
+  if (status === "partially_paid") return <span className="text-xs text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full font-semibold">{t("common.invoiceStatus.partial")}</span>;
+  return <span className="text-xs text-red-600 bg-red-50 px-2.5 py-1 rounded-full font-semibold">{t("common.invoiceStatus.unpaid")}</span>;
 }
 
-function formatDate(d: string) {
-  return new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+function formatDate(d: string, isAr = false) {
+  return new Date(d).toLocaleDateString(isAr ? "ar-SA" : "en-US", { year: "numeric", month: "short", day: "numeric" });
 }
 
 const inputCls = "w-full px-3.5 py-2.5 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-shadow";

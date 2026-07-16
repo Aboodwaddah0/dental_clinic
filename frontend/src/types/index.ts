@@ -52,7 +52,7 @@ export interface DentalRecord {
   condition: string;
   description: string;
   treatment: string;
-  status: "active" | "resolved" | "extracted";
+  status: "healthy" | "caries" | "treated" | "missing" | "extracted" | "needs_treatment";
   date: string;
   doctor: string;
 }

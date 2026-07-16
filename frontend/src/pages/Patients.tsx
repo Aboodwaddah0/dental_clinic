@@ -8,6 +8,7 @@ import type { Patient } from "../types";
 import { useAuth } from "../contexts/AuthContext";
 import { listPatients, deletePatient } from "../api/patients";
 import { getPatientBalances } from "../api/invoices";
+import { formatCurrency } from "../lib/format";
 import PatientForm from "../components/PatientForm";
 import {
   Table,
@@ -150,8 +151,8 @@ export default function Patients() {
               <TableHead className="hidden md:table-cell">{t("patients.columns.dateOfBirth")}</TableHead>
               <TableHead className="hidden lg:table-cell">{t("patients.columns.gender")}</TableHead>
               <TableHead className="hidden lg:table-cell">{t("patients.columns.bloodType")}</TableHead>
-              <TableHead className="hidden sm:table-cell">Remaining</TableHead>
-              <TableHead className="text-right">{t("patients.columns.actions")}</TableHead>
+              <TableHead className="hidden sm:table-cell">{t("patients.columns.remaining")}</TableHead>
+              <TableHead className="text-end">{t("patients.columns.actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -197,15 +198,15 @@ export default function Patients() {
                     <TableCell className="hidden sm:table-cell">
                       {remainingMap[p.id] != null ? (
                         remainingMap[p.id] > 0 ? (
-                          <span className="text-amber-600 font-semibold">${remainingMap[p.id].toLocaleString()}</span>
+                          <span className="text-amber-600 font-semibold">{formatCurrency(remainingMap[p.id])}</span>
                         ) : (
-                          <span className="text-emerald-600 font-medium">Paid</span>
+                          <span className="text-emerald-600 font-medium">{t("common.invoiceStatus.paid")}</span>
                         )
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-end">
                       <div className="flex items-center justify-end gap-1">
                         <Button variant="ghost" size="icon" title="View" onClick={() => navigate(`/patients/${p.id}`)}>
                           <Eye className="w-4 h-4" />

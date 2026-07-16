@@ -17,6 +17,7 @@ import {
 import { listPatients } from "../api/patients";
 import { listAppointments } from "../api/appointments";
 import { listInvoices } from "../api/invoices";
+import { formatCurrency } from "../lib/format";
 import type { Patient, Appointment, Invoice } from "../types";
 
 const today = new Date().toISOString().split("T")[0];
@@ -73,7 +74,7 @@ export default function Dashboard() {
     },
     {
       label: t("dashboard.pendingPayments"),
-      value: `$${pendingTotal.toLocaleString()}`,
+      value: formatCurrency(pendingTotal),
       change: t("dashboard.invoices", { count: pendingCount }),
       icon: CreditCard,
       color: "text-amber-600",
@@ -135,7 +136,7 @@ export default function Dashboard() {
                     <p className="text-xs text-muted-foreground truncate">{appt.notes}</p>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
-                    <div className="text-right">
+                    <div className="text-end">
                       <p className="text-xs font-semibold text-foreground">{appt.start_time}</p>
                       <p className="text-xs text-muted-foreground">{appt.end_time}</p>
                     </div>
@@ -234,7 +235,7 @@ function QuickAction({
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border hover:border-primary/30 hover:bg-secondary/50 transition-colors text-left group"
+      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border hover:border-primary/30 hover:bg-secondary/50 transition-colors text-start group"
     >
       <div className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center group-hover:bg-primary/10 transition-colors">
         <Icon className="w-4 h-4 text-primary" />

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Search } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { listPatients } from "../api/patients";
 import { listDentalRecords, createDentalRecord } from "../api/dentalRecords";
 import type { Patient, DentalRecord } from "../types";
@@ -9,6 +10,9 @@ import DentalChart from "../components/DentalChart";
 
 export default function DentalChartPage() {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
+  const isAr = i18n.language === "ar";
+
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState<string>("");
   const [records, setRecords] = useState<DentalRecord[]>([]);
@@ -19,14 +23,14 @@ export default function DentalChartPage() {
         setPatients(data);
         if (data.length > 0) setSelectedPatientId(data[0].id);
       })
-      .catch(() => toast.error("Failed to load patients"));
+      .catch(() => toast.error(t("patients.noPatients")));
   }, []);
 
   useEffect(() => {
     if (!selectedPatientId) return;
     listDentalRecords({ patient_id: selectedPatientId, limit: 200 })
       .then(({ data }) => setRecords(data))
-      .catch(() => toast.error("Failed to load dental records"));
+      .catch(() => toast.error(t("patientDetail.tabs.dental")));
   }, [selectedPatientId]);
 
   const patient = patients.find((p) => p.id === selectedPatientId);
@@ -36,7 +40,7 @@ export default function DentalChartPage() {
       const { data } = await createDentalRecord({ ...r, patient_id: selectedPatientId });
       setRecords((prev) => [data, ...prev]);
     } catch {
-      toast.error("Failed to save dental record");
+      toast.error(t("patientDetail.tabs.dental"));
     }
   };
 
@@ -44,18 +48,18 @@ export default function DentalChartPage() {
     <div className="p-6 space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-foreground">Dental Chart</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">FDI notation — click a tooth to view or add records</p>
+          <h1 className="text-xl font-bold text-foreground">{t("dentalChart.title")}</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">{t("dentalChart.subtitle")}</p>
         </div>
       </div>
 
       {/* Patient selector */}
       <div className="bg-card rounded-xl border border-border p-4">
-        <label className="block text-sm font-medium text-muted-foreground mb-2">Select Patient</label>
+        <label className="block text-sm font-medium text-muted-foreground mb-2">{t("dentalChart.selectPatient")}</label>
         <div className="relative max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+          <Search className={`absolute ${isAr ? "end-3" : "start-3"} top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none`} />
           <select
-            className="w-full pl-9 pr-4 py-2.5 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring appearance-none"
+            className={`w-full ${isAr ? "pe-9 ps-4" : "ps-9 pe-4"} py-2.5 bg-input-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring appearance-none`}
             value={selectedPatientId}
             onChange={(e) => setSelectedPatientId(e.target.value)}
           >
@@ -75,10 +79,10 @@ export default function DentalChartPage() {
               <p className="text-xs text-muted-foreground">{patient.phone}</p>
             </div>
             <button
-              className="ml-auto text-xs text-primary font-medium hover:underline"
+              className="ms-auto text-xs text-primary font-medium hover:underline"
               onClick={() => navigate(`/patients/${patient.id}?tab=dental`)}
             >
-              View full profile →
+              {t("dentalChart.viewFullProfile")}
             </button>
           </div>
         )}

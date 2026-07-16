@@ -8,7 +8,7 @@ export interface DentalRecordInput {
   condition?: string;
   description?: string;
   treatment?: string;
-  status?: "active" | "resolved" | "extracted";
+  status?: "healthy" | "caries" | "treated" | "missing" | "extracted" | "needs_treatment";
 }
 
 export const listDentalRecords = (params: { patient_id: string; limit?: number; offset?: number }) =>

@@ -13,6 +13,7 @@ const Files = lazy(() => import("../pages/Files"));
 const Billing = lazy(() => import("../pages/Billing"));
 const Availability = lazy(() => import("../pages/Availability"));
 const Settings = lazy(() => import("../pages/Settings"));
+const Reports = lazy(() => import("../pages/Reports"));
 
 function PageFallback() {
   return (
@@ -50,6 +51,7 @@ function ProtectedRoutes() {
           <Route path="/files" element={<Files />} />
           <Route path="/billing" element={<Billing />} />
           <Route path="/availability" element={<Availability />} />
+          <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

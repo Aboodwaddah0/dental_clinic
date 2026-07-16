@@ -177,13 +177,16 @@ export async function cancelAppointment(id: string, notes?: string) {
 }
 
 async function checkAppointmentStatus() {
-  const now = new Date().toISOString();
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);           // "2026-07-16"
+  const currentTime = now.toTimeString().slice(0, 8);     // "12:14:25"
 
+  // Past dates, OR same date with end_time already passed
   const { data: appointments, error } = await supabase
     .from("appointments")
     .select("id")
     .eq("status", "scheduled")
-    .lt("end_time", now);
+    .or(`appointment_date.lt.${today},and(appointment_date.eq.${today},end_time.lt.${currentTime})`);
 
   if (error) {
     console.error("Error fetching appointments:", error);
