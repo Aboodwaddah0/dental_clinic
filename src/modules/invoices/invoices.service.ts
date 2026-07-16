@@ -13,17 +13,15 @@ function flattenInvoice(row: any) {
 }
 
 export async function getPatientBalances(patientIds: string[]) {
-  const { data, error } = await supabase
-    .from("invoices")
-    .select("patient_id, total_amount, paid_amount")
-    .in("patient_id", patientIds);
+  const { data, error } = await supabase.rpc("get_patient_balances", {
+    patient_ids: patientIds,
+  });
 
   if (error) throw new Error(error.message);
 
   const map: Record<string, number> = {};
-  for (const inv of data ?? []) {
-    const remaining = Number(inv.total_amount) - Number(inv.paid_amount);
-    map[inv.patient_id] = (map[inv.patient_id] ?? 0) + remaining;
+  for (const row of data ?? []) {
+    map[row.patient_id] = Number(row.remaining);
   }
   return map;
 }

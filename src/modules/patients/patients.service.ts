@@ -37,26 +37,71 @@ export async function getPatientById(id: string) {
 
 export async function listPatients(q: ListPatientsQuery) {
   const key = listKey(q);
-  const cached = cache.get<{ data: unknown[]; count: number }>(key);
-  if (cached) return cached;
 
-  let query = supabase.from("patients").select("*", { count: "exact" });
+  const cached = cache.get<{
+    data: unknown[];
+    count: number;
+  }>(key);
+
+
+  if (cached) {
+    console.log("LIST CACHE HIT:", key);
+    return cached;
+  }
+
+
+  console.log("LIST CACHE MISS:", key);
+
+  console.log("QUERYING SUPABASE PATIENT LIST");
+
+
+  let query = supabase
+    .from("patients")
+    .select("*", { count: "exact" });
+
 
   if (q.search) {
     const safeSearch = q.search.replace(/[,()]/g, "");
-    query = query.or(`full_name.ilike.%${safeSearch}%,phone.ilike.%${safeSearch}%`);
+
+    query = query.or(
+      `full_name.ilike.%${safeSearch}%,phone.ilike.%${safeSearch}%`
+    );
   }
 
-  const { data, error, count } = await query
-    .order("created_at", { ascending: false })
-    .range(q.offset, q.offset + q.limit - 1);
+
+  const {
+    data,
+    error,
+    count,
+  } = await query
+    .order("created_at", {
+      ascending: false,
+    })
+    .range(
+      q.offset,
+      q.offset + q.limit - 1
+    );
+
 
   if (error) {
     throw new Error(error.message);
   }
 
-  const result = { data, count: count ?? 0 };
+
+  const result = {
+    data,
+    count: count ?? 0,
+  };
+
+
   cache.set(key, result);
+
+
+  console.log("LIST CACHE SET:", key);
+
+  console.log(cache.getStats());
+
+
   return result;
 }
 

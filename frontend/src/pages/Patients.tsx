@@ -1,44 +1,23 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { Search, Plus, Eye, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 import { useTranslation } from "react-i18next";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Patient } from "../types";
 import { useAuth } from "../contexts/AuthContext";
 import { listPatients, deletePatient } from "../api/patients";
 import { getPatientBalances } from "../api/invoices";
 import { formatCurrency } from "../lib/format";
 import PatientForm from "../components/PatientForm";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "../app/components/ui/table";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../app/components/ui/table";
 import { Button } from "../app/components/ui/button";
 import { Input } from "../app/components/ui/input";
 import { Badge } from "../app/components/ui/badge";
 import { Skeleton } from "../app/components/ui/skeleton";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationPrevious,
-  PaginationNext,
-} from "../app/components/ui/pagination";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogFooter,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from "../app/components/ui/alert-dialog";
+import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationNext } from "../app/components/ui/pagination";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogCancel, AlertDialogAction } from "../app/components/ui/alert-dialog";
 
 const PAGE_SIZE = 10;
 
@@ -48,11 +27,8 @@ export default function Patients() {
   const { canCreate, canEdit, canDelete } = useAuth();
   const { t, i18n } = useTranslation();
   const isAr = i18n.language === "ar";
+  const qc = useQueryClient();
 
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [count, setCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [remainingMap, setRemainingMap] = useState<Record<string, number>>({});
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -60,58 +36,43 @@ export default function Patients() {
   const [editPatient, setEditPatient] = useState<Patient | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Patient | null>(null);
 
-  const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
-
-  const fetchPatients = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await listPatients({ search, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE });
-      setPatients(res.data);
-      setCount(res.count);
-
-      // Fetch balances scoped to exactly the 10 IDs on this page — no payments join, minimal payload
-      const ids = res.data.map((p) => p.id);
-      if (ids.length > 0) {
-        getPatientBalances(ids)
-          .then(({ data }) => setRemainingMap(data))
-          .catch(() => {});
-      }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to load patients");
-    } finally {
-      setLoading(false);
-    }
-  }, [search, page]);
-
+  // Debounce search
   useEffect(() => {
-    fetchPatients();
-  }, [fetchPatients]);
-
-  useEffect(() => {
-    if (searchParams.get("new") === "true") {
-      setShowForm(true);
-      setSearchParams({});
-    }
-  }, []);
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setSearch(searchInput);
-      setPage(1);
-    }, 300);
-    return () => clearTimeout(timeout);
+    const t = setTimeout(() => { setSearch(searchInput); setPage(1); }, 300);
+    return () => clearTimeout(t);
   }, [searchInput]);
 
-  const handleDelete = async (p: Patient) => {
-    try {
-      await deletePatient(p.id);
+  // Open form if ?new=true
+  useEffect(() => {
+    if (searchParams.get("new") === "true") { setShowForm(true); setSearchParams({}); }
+  }, []);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["patients", search, page],
+    queryFn: () => listPatients({ search, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
+  });
+
+  const patients = data?.data ?? [];
+  const count = data?.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
+
+  const { data: balancesData } = useQuery({
+    queryKey: ["patient-balances", patients.map((p) => p.id)],
+    queryFn: () => getPatientBalances(patients.map((p) => p.id)),
+    enabled: patients.length > 0,
+  });
+  const remainingMap = balancesData?.data ?? {};
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deletePatient(id),
+    onSuccess: () => {
       toast.success("Patient deleted");
       setDeleteConfirm(null);
-      fetchPatients();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete patient");
-    }
-  };
+      qc.invalidateQueries({ queryKey: ["patients"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-patients"] });
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to delete patient"),
+  });
 
   return (
     <div className="p-6">
@@ -121,12 +82,7 @@ export default function Patients() {
           <p className="text-sm text-muted-foreground mt-0.5">{t("patients.totalPatients", { count })}</p>
         </div>
         {canCreate() && (
-          <Button
-            onClick={() => {
-              setEditPatient(null);
-              setShowForm(true);
-            }}
-          >
+          <Button onClick={() => { setEditPatient(null); setShowForm(true); }}>
             <Plus className="w-4 h-4" /> {t("patients.addPatient")}
           </Button>
         )}
@@ -156,13 +112,9 @@ export default function Patients() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
+            {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell colSpan={7}>
-                    <Skeleton className="h-8 w-full" />
-                  </TableCell>
-                </TableRow>
+                <TableRow key={i}><TableCell colSpan={7}><Skeleton className="h-8 w-full" /></TableCell></TableRow>
               ))
             ) : (
               <AnimatePresence initial={false}>
@@ -188,50 +140,30 @@ export default function Patients() {
                       {p.date_of_birth ? formatDate(p.date_of_birth, isAr) : "—"}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
-                      <span className="capitalize text-muted-foreground">
-                        {p.gender ? t(`patients.form.${p.gender}`) : "—"}
-                      </span>
+                      <span className="capitalize text-muted-foreground">{p.gender ? t(`patients.form.${p.gender}`) : "—"}</span>
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
                       {p.blood_type ? <Badge variant="secondary">{p.blood_type}</Badge> : "—"}
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
                       {remainingMap[p.id] != null ? (
-                        remainingMap[p.id] > 0 ? (
-                          <span className="text-amber-600 font-semibold">{formatCurrency(remainingMap[p.id])}</span>
-                        ) : (
-                          <span className="text-emerald-600 font-medium">{t("common.invoiceStatus.paid")}</span>
-                        )
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
+                        remainingMap[p.id] > 0
+                          ? <span className="text-amber-600 font-semibold">{formatCurrency(remainingMap[p.id])}</span>
+                          : <span className="text-emerald-600 font-medium">{t("common.invoiceStatus.paid")}</span>
+                      ) : <span className="text-muted-foreground">—</span>}
                     </TableCell>
                     <TableCell className="text-end">
                       <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" title="View" onClick={() => navigate(`/patients/${p.id}`)}>
+                        <Button variant="ghost" size="icon" onClick={() => navigate(`/patients/${p.id}`)}>
                           <Eye className="w-4 h-4" />
                         </Button>
                         {canEdit() && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title={t("common.edit")}
-                            onClick={() => {
-                              setEditPatient(p);
-                              setShowForm(true);
-                            }}
-                          >
+                          <Button variant="ghost" size="icon" onClick={() => { setEditPatient(p); setShowForm(true); }}>
                             <Pencil className="w-4 h-4" />
                           </Button>
                         )}
                         {canDelete() && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title={t("common.delete")}
-                            className="hover:text-destructive"
-                            onClick={() => setDeleteConfirm(p)}
-                          >
+                          <Button variant="ghost" size="icon" className="hover:text-destructive" onClick={() => setDeleteConfirm(p)}>
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         )}
@@ -241,12 +173,8 @@ export default function Patients() {
                 ))}
               </AnimatePresence>
             )}
-            {!loading && patients.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
-                  {t("patients.noPatients")}
-                </TableCell>
-              </TableRow>
+            {!isLoading && patients.length === 0 && (
+              <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">{t("patients.noPatients")}</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
@@ -259,21 +187,13 @@ export default function Patients() {
             <Pagination className="mx-0 w-auto">
               <PaginationContent>
                 <PaginationItem>
-                  <PaginationPrevious
-                    href="#"
-                    onClick={(e) => { e.preventDefault(); if (page > 1) setPage((p) => p - 1); }}
-                    className={page === 1 ? "pointer-events-none opacity-40" : ""}
-                  />
+                  <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); if (page > 1) setPage((p) => p - 1); }} className={page === 1 ? "pointer-events-none opacity-40" : ""} />
                 </PaginationItem>
                 <PaginationItem>
                   <span className="text-xs font-medium text-foreground px-2">{page} / {totalPages}</span>
                 </PaginationItem>
                 <PaginationItem>
-                  <PaginationNext
-                    href="#"
-                    onClick={(e) => { e.preventDefault(); if (page < totalPages) setPage((p) => p + 1); }}
-                    className={page === totalPages ? "pointer-events-none opacity-40" : ""}
-                  />
+                  <PaginationNext href="#" onClick={(e) => { e.preventDefault(); if (page < totalPages) setPage((p) => p + 1); }} className={page === totalPages ? "pointer-events-none opacity-40" : ""} />
                 </PaginationItem>
               </PaginationContent>
             </Pagination>
@@ -286,7 +206,12 @@ export default function Patients() {
           patient={editPatient}
           open={showForm}
           onClose={() => { setShowForm(false); setEditPatient(null); }}
-          onSaved={() => { setShowForm(false); setEditPatient(null); fetchPatients(); }}
+          onSaved={() => {
+            setShowForm(false);
+            setEditPatient(null);
+            qc.invalidateQueries({ queryKey: ["patients"] });
+            qc.invalidateQueries({ queryKey: ["dashboard-patients"] });
+          }}
         />
       )}
 
@@ -294,15 +219,13 @@ export default function Patients() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("patients.delete.title")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("patients.delete.description", { name: deleteConfirm?.full_name })}
-            </AlertDialogDescription>
+            <AlertDialogDescription>{t("patients.delete.description", { name: deleteConfirm?.full_name })}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+              onClick={() => deleteConfirm && deleteMutation.mutate(deleteConfirm.id)}
             >
               {t("common.delete")}
             </AlertDialogAction>
@@ -314,9 +237,5 @@ export default function Patients() {
 }
 
 function formatDate(d: string, isAr: boolean) {
-  return new Date(d).toLocaleDateString(isAr ? "ar-SA" : "en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return new Date(d).toLocaleDateString(isAr ? "ar-SA" : "en-US", { year: "numeric", month: "short", day: "numeric" });
 }
