@@ -12,6 +12,22 @@ function flattenInvoice(row: any) {
   };
 }
 
+export async function getPatientBalances(patientIds: string[]) {
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("patient_id, total_amount, paid_amount")
+    .in("patient_id", patientIds);
+
+  if (error) throw new Error(error.message);
+
+  const map: Record<string, number> = {};
+  for (const inv of data ?? []) {
+    const remaining = Number(inv.total_amount) - Number(inv.paid_amount);
+    map[inv.patient_id] = (map[inv.patient_id] ?? 0) + remaining;
+  }
+  return map;
+}
+
 export async function listInvoices({ patient_id, status, limit, offset }: ListInvoicesQuery) {
   let query = supabase.from("invoices").select(INVOICE_SELECT, { count: "exact" });
 

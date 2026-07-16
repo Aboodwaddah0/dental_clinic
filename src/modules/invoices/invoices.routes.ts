@@ -7,12 +7,14 @@ import {
   updateInvoiceHandler,
   deleteInvoiceHandler,
   addPaymentHandler,
+  getPatientBalancesHandler,
 } from "./invoices.controller.js";
 
 export const invoicesRouter = Router();
 
 invoicesRouter.use(requireAuth);
 
+invoicesRouter.get("/balances", getPatientBalancesHandler);
 invoicesRouter.get("/", listInvoicesHandler);
 invoicesRouter.get("/:id", getInvoiceHandler);
 invoicesRouter.post("/", requireRole("doctor"), createInvoiceHandler);

@@ -16,6 +16,11 @@ export interface InvoiceInput {
 export const listInvoices = (params?: { patient_id?: string; status?: string; limit?: number; offset?: number }) =>
   request<PaginatedResponse<Invoice>>("/api/invoices", { query: params });
 
+export const getPatientBalances = (patientIds: string[]) =>
+  request<{ data: Record<string, number> }>("/api/invoices/balances", {
+    query: { patient_ids: patientIds.join(",") },
+  });
+
 export const getInvoice = (id: string) =>
   request<{ data: Invoice }>(`/api/invoices/${id}`);
 

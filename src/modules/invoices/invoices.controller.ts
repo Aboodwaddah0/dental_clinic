@@ -6,7 +6,14 @@ import {
   addPaymentSchema,
   listInvoicesQuerySchema,
   invoiceIdParamSchema,
+  patientBalancesQuerySchema,
 } from "./invoices.schema.js";
+
+export async function getPatientBalancesHandler(req: Request, res: Response) {
+  const { patient_ids } = patientBalancesQuerySchema.parse(req.query);
+  const data = await invoicesService.getPatientBalances(patient_ids);
+  res.status(200).json({ data });
+}
 
 export async function listInvoicesHandler(req: Request, res: Response) {
   const query = listInvoicesQuerySchema.parse(req.query);

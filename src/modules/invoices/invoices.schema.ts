@@ -24,6 +24,10 @@ export const listInvoicesQuerySchema = z.object({
 
 export const invoiceIdParamSchema = z.string().uuid();
 
+export const patientBalancesQuerySchema = z.object({
+  patient_ids: z.string().transform((val) => val.split(",").filter(Boolean)),
+});
+
 export type CreateInvoiceInput = z.infer<typeof createInvoiceSchema>;
 export type UpdateInvoiceInput = z.infer<typeof updateInvoiceSchema>;
 export type AddPaymentInput = z.infer<typeof addPaymentSchema>;

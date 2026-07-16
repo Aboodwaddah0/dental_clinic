@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import type { Patient } from "../types";
 import { useAuth } from "../contexts/AuthContext";
 import { listPatients, deletePatient } from "../api/patients";
-import { listInvoices } from "../api/invoices";
+import { getPatientBalances } from "../api/invoices";
 import PatientForm from "../components/PatientForm";
 import {
   Table,
@@ -67,15 +67,14 @@ export default function Patients() {
       const res = await listPatients({ search, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE });
       setPatients(res.data);
       setCount(res.count);
-      // fetch invoices for the current page of patients and build remaining map
-      listInvoices({ limit: 100 }).then(({ data }) => {
-        const map: Record<string, number> = {};
-        for (const inv of data) {
-          const r = Number(inv.total_amount) - Number(inv.paid_amount);
-          map[inv.patient_id] = (map[inv.patient_id] ?? 0) + r;
-        }
-        setRemainingMap(map);
-      }).catch(() => {});
+
+      // Fetch balances scoped to exactly the 10 IDs on this page — no payments join, minimal payload
+      const ids = res.data.map((p) => p.id);
+      if (ids.length > 0) {
+        getPatientBalances(ids)
+          .then(({ data }) => setRemainingMap(data))
+          .catch(() => {});
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to load patients");
     } finally {

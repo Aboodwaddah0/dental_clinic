@@ -1,7 +1,23 @@
+import NodeCache from "node-cache";
 import { supabase } from "../../lib/supabase.js";
 import { ConflictError, NotFoundError, ValidationError } from "../../lib/errors.js";
 import { isConstraintViolation, NOT_FOUND_CODE } from "../../lib/pg-error-codes.js";
 import type { CreateAppointmentInput, ListAppointmentsQuery, UpdateAppointmentInput } from "./appointments.schema.js";
+
+// 60s TTL — appointments have time-sensitive status that can change automatically
+const cache = new NodeCache({ stdTTL: 60 });
+
+function listKey(q: ListAppointmentsQuery) {
+  return `list:${q.doctor_id ?? ""}:${q.patient_id ?? ""}:${q.status ?? ""}:${q.from ?? ""}:${q.to ?? ""}:${q.limit}:${q.offset}`;
+}
+
+function appointmentKey(id: string) {
+  return `appointment:${id}`;
+}
+
+function invalidateAll() {
+  cache.flushAll();
+}
 
 // Any existing, non-cancelled appointment for this doctor on the same date
 // whose time range overlaps [start, end) counts as a conflict. excludeId
@@ -33,7 +49,12 @@ async function hasConflict(
   return (count ?? 0) > 0;
 }
 
-export async function listAppointments({ doctor_id, patient_id, status, from, to, limit, offset }: ListAppointmentsQuery) {
+export async function listAppointments(q: ListAppointmentsQuery) {
+  const key = listKey(q);
+  const cached = cache.get<{ data: unknown[]; count: number }>(key);
+  if (cached) return cached;
+
+  const { doctor_id, patient_id, status, from, to, limit, offset } = q;
   let query = supabase.from("appointments").select("*, patient:patients!patient_id(full_name)", { count: "exact" });
 
   if (doctor_id) query = query.eq("doctor_id", doctor_id);
@@ -57,10 +78,15 @@ export async function listAppointments({ doctor_id, patient_id, status, from, to
     patient: undefined,
   }));
 
-  return { data: flattened, count: count ?? 0 };
+  const result = { data: flattened, count: count ?? 0 };
+  cache.set(key, result);
+  return result;
 }
 
 export async function getAppointmentById(id: string) {
+  const cached = cache.get(appointmentKey(id));
+  if (cached) return cached;
+
   const { data, error } = await supabase.from("appointments").select("*").eq("id", id).single();
 
   if (error) {
@@ -70,6 +96,7 @@ export async function getAppointmentById(id: string) {
     throw new Error(error.message);
   }
 
+  cache.set(appointmentKey(id), data);
   return data;
 }
 
@@ -106,6 +133,7 @@ export async function createAppointment(params: CreateAppointmentInput) {
     throw new Error(error.message);
   }
 
+  invalidateAll();
   return data;
 }
 
@@ -139,6 +167,7 @@ export async function updateAppointment(id: string, input: UpdateAppointmentInpu
     throw new Error(error.message);
   }
 
+  invalidateAll();
   return data;
 }
 
@@ -147,44 +176,39 @@ export async function cancelAppointment(id: string, notes?: string) {
   return updateAppointment(id, { status: "cancelled", notes });
 }
 
-export async function checkAppointmentStatus() {
+async function checkAppointmentStatus() {
+  const now = new Date().toISOString();
 
-   const now = new Date().toISOString();
-
-   const { data: appointments, error } = await supabase
+  const { data: appointments, error } = await supabase
     .from("appointments")
-    .select("id, end_time")
+    .select("id")
     .eq("status", "scheduled")
     .lt("end_time", now);
 
-      if (error) {
+  if (error) {
     console.error("Error fetching appointments:", error);
     return;
   }
 
-  if (!appointments || appointments.length === 0) {
-    console.log("No expired appointments");
-    return;
-  }
+  if (!appointments || appointments.length === 0) return;
 
- 
-  const ids = appointments.map(app => app.id);
+  const ids = appointments.map(a => a.id);
 
   const { error: updateError } = await supabase
     .from("appointments")
-    .update({
-      status: "completed"
-    })
+    .update({ status: "completed" })
     .in("id", ids);
-
 
   if (updateError) {
     console.error("Error updating appointments:", updateError);
     return;
   }
-  
-  setInterval(() => {
-  checkAppointmentStatus();
-}, 3*60*60*1000);
+
+  // Invalidate cache so next read reflects the new statuses
+  invalidateAll();
 }
+
+// Run once at startup, then every 3 hours
+checkAppointmentStatus();
+setInterval(checkAppointmentStatus, 3 * 60 * 60 * 1000);
 
