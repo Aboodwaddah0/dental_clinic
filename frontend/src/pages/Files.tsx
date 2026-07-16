@@ -1,22 +1,44 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Search, Download, Eye, Trash2, FileText, Image as ImageIcon, Scan, X } from "lucide-react";
-import { mockFiles, mockPatients } from "../data/mockData";
-import type { PatientFile } from "../types";
+import { toast } from "sonner";
+import { listPatientFiles, deletePatientFile } from "../api/patientFiles";
+import { listPatients } from "../api/patients";
+import type { PatientFile, Patient } from "../types";
 
 export default function Files() {
   const navigate = useNavigate();
-  const [files, setFiles] = useState<PatientFile[]>(mockFiles);
+  const [files, setFiles] = useState<PatientFile[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("");
   const [preview, setPreview] = useState<PatientFile | null>(null);
 
+  useEffect(() => {
+    listPatients({ limit: 100 }).then(({ data }) => {
+      setPatients(data);
+      Promise.all(data.map((p) => listPatientFiles({ patient_id: p.id, limit: 100 }).then(({ data: f }) => f)))
+        .then((results) => setFiles(results.flat()))
+        .catch(() => toast.error("Failed to load files"));
+    }).catch(() => toast.error("Failed to load patients"));
+  }, []);
+
   const filtered = files.filter((f) => {
-    const patient = mockPatients.find((p) => p.id === f.patient_id);
+    const patient = patients.find((p) => p.id === f.patient_id);
     const matchSearch = !search || f.description.toLowerCase().includes(search.toLowerCase()) || patient?.full_name.toLowerCase().includes(search.toLowerCase());
     const matchType = !filterType || f.file_type === filterType;
     return matchSearch && matchType;
   });
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deletePatientFile(id);
+      setFiles((prev) => prev.filter((f) => f.id !== id));
+      toast.success("File deleted");
+    } catch {
+      toast.error("Failed to delete file");
+    }
+  };
 
   const fileIcon = (type: PatientFile["file_type"]) => {
     if (type === "xray") return <Scan className="w-5 h-5 text-blue-500" />;
@@ -57,7 +79,7 @@ export default function Files() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map((f) => {
-            const patient = mockPatients.find((p) => p.id === f.patient_id);
+            const patient = patients.find((p) => p.id === f.patient_id);
             return (
               <div key={f.id} className="bg-card rounded-xl border border-border overflow-hidden group">
                 {f.file_type !== "pdf" ? (
@@ -110,7 +132,7 @@ export default function Files() {
                       </button>
                       <button
                         className="p-1.5 rounded-lg hover:bg-red-50 transition-colors text-muted-foreground hover:text-destructive"
-                        onClick={() => setFiles((prev) => prev.filter((x) => x.id !== f.id))}
+                        onClick={() => handleDelete(f.id)}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>

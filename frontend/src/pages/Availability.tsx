@@ -1,11 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Clock, Check } from "lucide-react";
-import { mockAvailability } from "../data/mockData";
+import { toast } from "sonner";
+import { request } from "../api/client";
 import type { AvailabilitySlot } from "../types";
 
 export default function Availability() {
-  const [slots, setSlots] = useState<AvailabilitySlot[]>(mockAvailability);
+  const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    request<{ data: AvailabilitySlot[] }>("/api/availability")
+      .then(({ data }) => setSlots(data))
+      .catch(() => toast.error("Failed to load availability"));
+  }, []);
 
   const update = (day: string, field: keyof AvailabilitySlot, value: string | boolean) => {
     setSlots((prev) =>
@@ -14,10 +21,14 @@ export default function Availability() {
     setSaved(false);
   };
 
-  const handleSave = () => {
-    // In production: PUT /api/availability
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  const handleSave = async () => {
+    try {
+      await request("/api/availability", { method: "PUT", body: slots });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch {
+      toast.error("Failed to save schedule");
+    }
   };
 
   const inputCls =

@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
+import { useState, useEffect } from "react";
 import {
   Users,
   CalendarDays,
@@ -13,7 +14,10 @@ import {
   CalendarPlus,
   TrendingUp,
 } from "lucide-react";
-import { mockPatients, mockAppointments, mockInvoices } from "../data/mockData";
+import { listPatients } from "../api/patients";
+import { listAppointments } from "../api/appointments";
+import { listInvoices } from "../api/invoices";
+import type { Patient, Appointment, Invoice } from "../types";
 
 const today = new Date().toISOString().split("T")[0];
 
@@ -22,17 +26,30 @@ export default function Dashboard() {
   const { t, i18n } = useTranslation();
   const isAr = i18n.language === "ar";
 
-  const todayAppointments = mockAppointments.filter((a) => a.appointment_date === today);
-  const upcomingAppointments = mockAppointments.filter(
-    (a) => a.appointment_date > today && a.status === "scheduled"
-  );
-  const pendingInvoices = mockInvoices.filter((i) => i.status !== "paid");
-  const pendingTotal = pendingInvoices.reduce((s, i) => s + (i.total_amount - i.paid_amount), 0);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
+  const [upcomingCount, setUpcomingCount] = useState(0);
+  const [pendingTotal, setPendingTotal] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    listPatients({ limit: 5 }).then(({ data }) => setPatients(data)).catch(() => {});
+    listAppointments({ from: today, to: today, limit: 100 })
+      .then(({ data }) => setTodayAppointments(data)).catch(() => {});
+    listAppointments({ from: new Date(Date.now() + 86400000).toISOString().split("T")[0], status: "scheduled", limit: 1 })
+      .then(({ count }) => setUpcomingCount(count ?? 0)).catch(() => {});
+    listInvoices({ limit: 100 })
+      .then(({ data }) => {
+        const pending = (data as Invoice[]).filter((i) => i.status !== "paid");
+        setPendingCount(pending.length);
+        setPendingTotal(pending.reduce((s, i) => s + (i.total_amount - i.paid_amount), 0));
+      }).catch(() => {});
+  }, []);
 
   const stats = [
     {
       label: t("dashboard.totalPatients"),
-      value: mockPatients.length.toString(),
+      value: patients.length.toString(),
       change: t("dashboard.thisMonth", { count: 3 }),
       icon: Users,
       color: "text-blue-600",
@@ -48,7 +65,7 @@ export default function Dashboard() {
     },
     {
       label: t("dashboard.upcoming"),
-      value: upcomingAppointments.length.toString(),
+      value: upcomingCount.toString(),
       change: t("dashboard.nextDays"),
       icon: Clock,
       color: "text-violet-600",
@@ -57,7 +74,7 @@ export default function Dashboard() {
     {
       label: t("dashboard.pendingPayments"),
       value: `$${pendingTotal.toLocaleString()}`,
-      change: t("dashboard.invoices", { count: pendingInvoices.length }),
+      change: t("dashboard.invoices", { count: pendingCount }),
       icon: CreditCard,
       color: "text-amber-600",
       bg: "bg-amber-50",
@@ -144,7 +161,7 @@ export default function Dashboard() {
               </button>
             </div>
             <ul className="divide-y divide-border">
-              {mockPatients.slice(0, 5).map((patient) => (
+              {patients.slice(0, 5).map((patient) => (
                 <li
                   key={patient.id}
                   className="flex items-center gap-3 px-5 py-3 hover:bg-muted/50 transition-colors cursor-pointer"

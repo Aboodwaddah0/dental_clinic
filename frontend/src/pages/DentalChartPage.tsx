@@ -1,27 +1,43 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Search } from "lucide-react";
-import { mockPatients, mockDentalRecords } from "../data/mockData";
-import type { DentalRecord } from "../types";
+import { toast } from "sonner";
+import { listPatients } from "../api/patients";
+import { listDentalRecords, createDentalRecord } from "../api/dentalRecords";
+import type { Patient, DentalRecord } from "../types";
 import DentalChart from "../components/DentalChart";
 
 export default function DentalChartPage() {
   const navigate = useNavigate();
-  const [selectedPatientId, setSelectedPatientId] = useState(mockPatients[0].id);
-  const [records, setRecords] = useState<DentalRecord[]>(mockDentalRecords);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [selectedPatientId, setSelectedPatientId] = useState<string>("");
+  const [records, setRecords] = useState<DentalRecord[]>([]);
 
-  const patient = mockPatients.find((p) => p.id === selectedPatientId);
-  const patientRecords = records.filter((r) => r.patient_id === selectedPatientId);
+  useEffect(() => {
+    listPatients({ limit: 100 })
+      .then(({ data }) => {
+        setPatients(data);
+        if (data.length > 0) setSelectedPatientId(data[0].id);
+      })
+      .catch(() => toast.error("Failed to load patients"));
+  }, []);
 
-  const handleAddRecord = (r: Omit<DentalRecord, "id" | "patient_id">) => {
-    setRecords((prev) => [
-      {
-        ...r,
-        id: "dr" + Date.now(),
-        patient_id: selectedPatientId,
-      },
-      ...prev,
-    ]);
+  useEffect(() => {
+    if (!selectedPatientId) return;
+    listDentalRecords({ patient_id: selectedPatientId, limit: 200 })
+      .then(({ data }) => setRecords(data))
+      .catch(() => toast.error("Failed to load dental records"));
+  }, [selectedPatientId]);
+
+  const patient = patients.find((p) => p.id === selectedPatientId);
+
+  const handleAddRecord = async (r: Omit<DentalRecord, "id" | "patient_id">) => {
+    try {
+      const { data } = await createDentalRecord({ ...r, patient_id: selectedPatientId });
+      setRecords((prev) => [data, ...prev]);
+    } catch {
+      toast.error("Failed to save dental record");
+    }
   };
 
   return (
@@ -43,7 +59,7 @@ export default function DentalChartPage() {
             value={selectedPatientId}
             onChange={(e) => setSelectedPatientId(e.target.value)}
           >
-            {mockPatients.map((p) => (
+            {patients.map((p) => (
               <option key={p.id} value={p.id}>{p.full_name}</option>
             ))}
           </select>

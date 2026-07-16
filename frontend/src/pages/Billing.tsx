@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { CreditCard, ChevronDown, ChevronUp, Plus, X, AlertCircle } from "lucide-react";
-import { mockInvoices } from "../data/mockData";
+import { listInvoices, addPayment } from "../api/invoices";
+import { toast } from "sonner";
 import type { Invoice, Payment } from "../types";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -9,7 +10,11 @@ export default function Billing() {
   const navigate = useNavigate();
   const { canCreate } = useAuth();
 
-  const [invoices, setInvoices] = useState<Invoice[]>(mockInvoices);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+
+  useEffect(() => {
+    listInvoices({ limit: 100 }).then(({ data }) => setInvoices(data as Invoice[])).catch(() => toast.error("Failed to load invoices"));
+  }, []);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState("");
   const [showPaymentModal, setShowPaymentModal] = useState<string | null>(null);
@@ -22,19 +27,18 @@ export default function Billing() {
     pending: invoices.reduce((s, i) => s + (i.total_amount - i.paid_amount), 0),
   };
 
-  const handleAddPayment = (invoiceId: string, payment: Omit<Payment, "id" | "invoice_id">) => {
-    setInvoices((prev) =>
-      prev.map((inv) => {
-        if (inv.id !== invoiceId) return inv;
-        const newPaid = inv.paid_amount + payment.amount;
-        return {
-          ...inv,
-          paid_amount: newPaid,
-          status: newPaid >= inv.total_amount ? "paid" : "partial",
-          payments: [...inv.payments, { ...payment, id: "pay" + Date.now(), invoice_id: invoiceId }],
-        };
-      })
-    );
+  const handleAddPayment = async (invoiceId: string, payment: Omit<Payment, "id" | "invoice_id">) => {
+    try {
+      const { data: updated } = await addPayment(invoiceId, {
+        amount: payment.amount,
+        payment_method: payment.payment_method,
+        date: payment.date,
+      });
+      setInvoices((prev) => prev.map((inv) => (inv.id === invoiceId ? updated : inv)));
+      toast.success("Payment recorded");
+    } catch {
+      toast.error("Failed to record payment");
+    }
     setShowPaymentModal(null);
   };
 

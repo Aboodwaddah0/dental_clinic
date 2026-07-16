@@ -27,7 +27,7 @@ import { getPatient, deletePatient } from "../api/patients";
 import { listAppointments } from "../api/appointments";
 import { listVisits, createVisit } from "../api/visits";
 import { listDentalRecords, createDentalRecord } from "../api/dentalRecords";
-import { listPatientFiles, deletePatientFile } from "../api/patientFiles";
+import { listPatientFiles, deletePatientFile, uploadPatientFile } from "../api/patientFiles";
 import { listInvoices, addPayment } from "../api/invoices";
 import PatientForm from "../components/PatientForm";
 import DentalChart from "../components/DentalChart";
@@ -163,6 +163,17 @@ export default function PatientDetail() {
     }
   };
 
+  const handleUploadFile = async (file: File, file_type: "xray" | "image" | "pdf", description: string) => {
+    if (!id) return;
+    try {
+      const { data: newFile } = await uploadPatientFile(file, id, file_type, description);
+      setFiles((prev) => [newFile, ...prev]);
+      toast.success("File uploaded");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    }
+  };
+
   const handleDeleteFile = async (fileId: string) => {
     try {
       await deletePatientFile(fileId);
@@ -289,6 +300,7 @@ export default function PatientDetail() {
         <FilesTab
           files={files}
           canCreate={canCreate()}
+          onUpload={handleUploadFile}
           onDelete={handleDeleteFile}
           onPreview={setPreviewFile}
         />
@@ -538,13 +550,30 @@ function VisitsTab({
 
 // ─── Files Tab ───────────────────────────────────────────────────────────────
 function FilesTab({
-  files, canCreate, onDelete, onPreview,
+  files, canCreate, onUpload, onDelete, onPreview,
 }: {
   files: PatientFile[];
   canCreate: boolean;
+  onUpload: (file: File, file_type: "xray" | "image" | "pdf", description: string) => Promise<void>;
   onDelete: (id: string) => void;
   onPreview: (f: PatientFile) => void;
 }) {
+  const [showForm, setShowForm] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [form, setForm] = useState({ file_type: "image" as "xray" | "image" | "pdf", description: "" });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFile) return;
+    setUploading(true);
+    await onUpload(selectedFile, form.file_type, form.description);
+    setUploading(false);
+    setShowForm(false);
+    setSelectedFile(null);
+    setForm({ file_type: "image", description: "" });
+  };
+
   const fileIcon = (type: PatientFile["file_type"]) => {
     if (type === "xray") return <Scan className="w-5 h-5 text-blue-500" />;
     if (type === "pdf") return <FileText className="w-5 h-5 text-red-500" />;
@@ -555,9 +584,53 @@ function FilesTab({
     <div className="space-y-4">
       {canCreate && (
         <div className="flex justify-end">
-          <button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg text-sm font-semibold transition-colors opacity-60 cursor-not-allowed">
+          <button
+            className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+            onClick={() => setShowForm(!showForm)}
+          >
             <Plus className="w-4 h-4" /> Upload File
           </button>
+        </div>
+      )}
+
+      {showForm && (
+        <div className="bg-card rounded-xl border border-border p-5">
+          <h3 className="font-semibold text-foreground mb-4">Upload File</h3>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">File</label>
+              <input
+                type="file"
+                required
+                accept=".jpg,.jpeg,.png,.pdf"
+                className={inputCls}
+                onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Type</label>
+              <select className={inputCls} value={form.file_type} onChange={(e) => setForm((f) => ({ ...f, file_type: e.target.value as "xray" | "image" | "pdf" }))}>
+                <option value="image">Image</option>
+                <option value="xray">X-Ray</option>
+                <option value="pdf">PDF</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Description</label>
+              <input className={inputCls} value={form.description} placeholder="Brief description…"
+                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button type="submit" disabled={uploading || !selectedFile}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50">
+                {uploading ? "Uploading…" : "Upload"}
+              </button>
+              <button type="button" onClick={() => setShowForm(false)}
+                className="px-4 py-2 rounded-lg text-sm border border-border hover:bg-muted transition-colors">
+                Cancel
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
