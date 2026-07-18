@@ -18,7 +18,7 @@ export const addPaymentSchema = z.object({
 export const listInvoicesQuerySchema = z.object({
   patient_id: z.string().uuid().optional(),
   status: z.enum(["unpaid", "partially_paid", "paid"]).optional(),
-  limit: z.coerce.number().int().positive().max(100).default(20),
+  limit: z.coerce.number().int().positive().max(500).default(20),
   offset: z.coerce.number().int().min(0).default(0),
 });
 
