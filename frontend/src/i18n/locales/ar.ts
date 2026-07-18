@@ -43,6 +43,7 @@ const ar = {
     settings: "الإعدادات",
     clinicManagement: "إدارة العيادة",
     reports: "التقارير",
+    expenses: "المصروفات",
   },
   layout: {
     greeting: {
@@ -381,6 +382,9 @@ const ar = {
       invoiceCount: "الفواتير",
       monthlyBreakdown: "التوزيع الشهري",
       byMethod: "حسب طريقة الدفع",
+      totalExpenses: "إجمالي المصروفات",
+      netProfit: "صافي الربح",
+      expensesByCategory: "المصروفات حسب الفئة",
     },
     payments: {
       colPatient: "المريض",
@@ -415,6 +419,38 @@ const ar = {
     },
     noData: "لا توجد بيانات للفلاتر المحددة.",
     loading: "جارٍ إنشاء التقرير…",
+  },
+  expenses: {
+    title: "المصروفات",
+    addExpense: "إضافة مصروف",
+    editExpense: "تعديل المصروف",
+    totalExpenses: "إجمالي المصروفات",
+    records: "سجل",
+    noExpenses: "لا توجد مصروفات.",
+    allCategories: "جميع الفئات",
+    category: "الفئة",
+    description: "الوصف",
+    descriptionPlaceholder: "مثال: قفازات، تجديد مخدّر…",
+    amount: "المبلغ",
+    date: "التاريخ",
+    created: "تم تسجيل المصروف.",
+    updated: "تم تحديث المصروف.",
+    deleted: "تم حذف المصروف.",
+    error: "حدث خطأ ما.",
+    categories: {
+      supplies: "مستلزمات",
+      salaries: "رواتب",
+      rent: "إيجار",
+      utilities: "مرافق",
+      equipment: "معدات",
+      other: "أخرى",
+    },
+    columns: {
+      date: "التاريخ",
+      category: "الفئة",
+      description: "الوصف",
+      amount: "المبلغ",
+    },
   },
 } as const;
 

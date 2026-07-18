@@ -43,6 +43,7 @@ const en = {
     settings: "Settings",
     clinicManagement: "Clinic Management",
     reports: "Reports",
+    expenses: "Expenses",
   },
   layout: {
     greeting: {
@@ -381,6 +382,9 @@ const en = {
       invoiceCount: "Invoices",
       monthlyBreakdown: "Monthly Breakdown",
       byMethod: "By Payment Method",
+      totalExpenses: "Total Expenses",
+      netProfit: "Net Profit",
+      expensesByCategory: "Expenses by Category",
     },
     payments: {
       colPatient: "Patient",
@@ -415,6 +419,38 @@ const en = {
     },
     noData: "No data found for the selected filters.",
     loading: "Generating report…",
+  },
+  expenses: {
+    title: "Expenses",
+    addExpense: "Add Expense",
+    editExpense: "Edit Expense",
+    totalExpenses: "Total Expenses",
+    records: "records",
+    noExpenses: "No expenses found.",
+    allCategories: "All Categories",
+    category: "Category",
+    description: "Description",
+    descriptionPlaceholder: "e.g. Gloves, anesthetic refill…",
+    amount: "Amount",
+    date: "Date",
+    created: "Expense recorded.",
+    updated: "Expense updated.",
+    deleted: "Expense deleted.",
+    error: "Something went wrong.",
+    categories: {
+      supplies: "Supplies",
+      salaries: "Salaries",
+      rent: "Rent",
+      utilities: "Utilities",
+      equipment: "Equipment",
+      other: "Other",
+    },
+    columns: {
+      date: "Date",
+      category: "Category",
+      description: "Description",
+      amount: "Amount",
+    },
   },
 } as const;
 

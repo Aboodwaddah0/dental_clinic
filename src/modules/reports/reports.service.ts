@@ -1,5 +1,6 @@
 import { supabase } from "../../lib/supabase.js";
 import type { DateRangeQuery } from "./reports.schema.js";
+import { getExpenseSummary } from "../expenses/expenses.service.js";
 
 // ─── Financial Report ────────────────────────────────────────────────────────
 
@@ -26,6 +27,9 @@ export async function getFinancialReport({ from, to }: DateRangeQuery) {
   const totalCollected = (invoices ?? []).reduce((s, i) => s + Number(i.paid_amount), 0);
   const outstanding    = totalBilled - totalCollected;
   const invoiceCount   = (invoices ?? []).length;
+
+  const { totalExpenses, expensesByCategory } = await getExpenseSummary({ from, to });
+  const netProfit = totalCollected - totalExpenses;
 
   // Monthly breakdown from payments
   const monthMap: Record<string, number> = {};
@@ -60,9 +64,10 @@ export async function getFinancialReport({ from, to }: DateRangeQuery) {
   const byMethod = Object.entries(methodMap).map(([method, amount]) => ({ method, amount }));
 
   return {
-    summary: { totalBilled, totalCollected, outstanding, invoiceCount },
+    summary: { totalBilled, totalCollected, outstanding, invoiceCount, totalExpenses, netProfit },
     monthly: monthlyFull,
     byMethod,
+    expensesByCategory,
   };
 }
 

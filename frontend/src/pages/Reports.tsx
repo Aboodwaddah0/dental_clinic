@@ -242,16 +242,18 @@ export default function Reports() {
           {selected === "financial" && financialData && (
             <div className="space-y-4">
               <ReportHeader from={from} to={to} isAr={isAr} />
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {[
-                  { label: t("reports.financial.totalBilled"),     value: formatCurrency(financialData.summary.totalBilled) },
-                  { label: t("reports.financial.totalCollected"),  value: formatCurrency(financialData.summary.totalCollected) },
-                  { label: t("reports.financial.outstanding"),     value: formatCurrency(financialData.summary.outstanding) },
-                  { label: t("reports.financial.invoiceCount"),    value: String(financialData.summary.invoiceCount) },
-                ].map(({ label, value }) => (
+                  { label: t("reports.financial.totalBilled"),     value: formatCurrency(financialData.summary.totalBilled),    color: "" },
+                  { label: t("reports.financial.totalCollected"),  value: formatCurrency(financialData.summary.totalCollected), color: "text-emerald-600" },
+                  { label: t("reports.financial.outstanding"),     value: formatCurrency(financialData.summary.outstanding),    color: "text-amber-600" },
+                  { label: t("reports.financial.invoiceCount"),    value: String(financialData.summary.invoiceCount),           color: "" },
+                  { label: t("reports.financial.totalExpenses"),   value: formatCurrency(financialData.summary.totalExpenses),  color: "text-destructive" },
+                  { label: t("reports.financial.netProfit"),       value: formatCurrency(financialData.summary.netProfit),      color: financialData.summary.netProfit >= 0 ? "text-emerald-600" : "text-destructive" },
+                ].map(({ label, value, color }) => (
                   <div key={label} className="bg-card border border-border rounded-xl p-4">
                     <div className="text-xs text-muted-foreground">{label}</div>
-                    <div className="text-xl font-bold mt-1">{value}</div>
+                    <div className={`text-xl font-bold mt-1 ${color}`}>{value}</div>
                   </div>
                 ))}
               </div>
@@ -280,6 +282,23 @@ export default function Reports() {
                     <PieChart>
                       <Pie data={financialData.byMethod} dataKey="amount" nameKey="method" cx="50%" cy="50%" outerRadius={80} label={(e) => `${e.method}: ${formatCurrency(e.amount)}`}>
                         {financialData.byMethod.map((_, i) => (
+                          <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {financialData.expensesByCategory?.length > 0 && (
+                <div className="bg-card border border-border rounded-xl p-4">
+                  <h3 className="font-semibold text-sm mb-4">{t("reports.financial.expensesByCategory")}</h3>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie data={financialData.expensesByCategory} dataKey="amount" nameKey="category" cx="50%" cy="50%" outerRadius={80}
+                        label={(e) => `${t(`expenses.categories.${e.category}`)}: ${formatCurrency(e.amount)}`}>
+                        {financialData.expensesByCategory.map((_, i) => (
                           <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                         ))}
                       </Pie>

@@ -5,15 +5,19 @@ export interface FinancialSummary {
   totalCollected: number;
   outstanding: number;
   invoiceCount: number;
+  totalExpenses: number;
+  netProfit: number;
 }
 
-export interface MonthlyPoint { month: string; billed: number; collected: number; }
-export interface MethodPoint  { method: string; amount: number; }
+export interface MonthlyPoint    { month: string; billed: number; collected: number; }
+export interface MethodPoint     { method: string; amount: number; }
+export interface CategoryPoint   { category: string; amount: number; }
 
 export interface FinancialReportData {
   summary: FinancialSummary;
   monthly: MonthlyPoint[];
   byMethod: MethodPoint[];
+  expensesByCategory: CategoryPoint[];
 }
 
 export interface PaymentRow {
