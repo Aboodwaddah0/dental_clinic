@@ -12,6 +12,9 @@ import { invoicesRouter } from "./modules/invoices/invoices.routes.js";
 import { dentalRecordsRouter } from "./modules/dental-records/dental-records.routes.js";
 import { reportsRouter } from "./modules/reports/reports.routes.js";
 import { expensesRouter } from "./modules/expenses/expenses.routes.js";
+import { setupRouter } from "./modules/setup/setup.routes.js";
+import { clinicSettingsRouter } from "./modules/clinic-settings/clinic-settings.routes.js";
+import { remindersRouter } from "./modules/reminders/reminder.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -47,7 +50,9 @@ app.use("/api/invoices", invoicesRouter);
 app.use("/api/dental-records", dentalRecordsRouter);
 app.use("/api/reports", reportsRouter);
 app.use("/api/expenses", expensesRouter);
-
+app.use("/api/setup", setupRouter);
+app.use("/api/clinic-settings", clinicSettingsRouter);
+app.use("/api/reminders", remindersRouter);
 
 app.use(errorHandler);
 

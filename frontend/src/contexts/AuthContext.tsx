@@ -7,6 +7,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
+  loginWithToken: (token: string, user: User) => void;
   logout: () => void;
   isLoading: boolean;
   canCreate: () => boolean;
@@ -58,6 +59,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setIsLoading(false));
   }, []);
 
+  const loginWithToken = (token: string, loggedInUser: User) => {
+    setAuthToken(token);
+    setUser(loggedInUser);
+    setToken(token);
+    localStorage.setItem("dc_token", token);
+    localStorage.setItem("dc_user", JSON.stringify(loggedInUser));
+  };
+
   const login = async (email: string, password: string) => {
     const { access_token, user: loggedInUser } = await apiLogin(email, password);
     setAuthToken(access_token);
@@ -72,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const canDelete = () => user?.role === "doctor";
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isLoading, canCreate, canEdit, canDelete }}>
+    <AuthContext.Provider value={{ user, token, login, loginWithToken, logout, isLoading, canCreate, canEdit, canDelete }}>
       {children}
     </AuthContext.Provider>
   );

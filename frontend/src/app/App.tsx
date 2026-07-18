@@ -1,8 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
-import { Suspense, lazy } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Suspense, lazy, type ReactNode } from "react";
+import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import Layout from "../components/Layout";
+import { getSetupStatus } from "../api/setup";
+import { setCurrency } from "../lib/format";
+import i18n from "../i18n";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,6 +28,8 @@ const Availability = lazy(() => import("../pages/Availability"));
 const Settings = lazy(() => import("../pages/Settings"));
 const Reports = lazy(() => import("../pages/Reports"));
 const Expenses = lazy(() => import("../pages/Expenses"));
+const Reminders = lazy(() => import("../pages/Reminders"));
+const Setup = lazy(() => import("../pages/Setup"));
 
 function PageFallback() {
   return (
@@ -34,20 +39,18 @@ function PageFallback() {
   );
 }
 
+function FullPageSpinner() {
+  return (
+    <div className="h-screen flex items-center justify-center bg-background">
+      <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+    </div>
+  );
+}
+
 function ProtectedRoutes() {
   const { user, isLoading } = useAuth();
 
-  if (isLoading) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-          <p className="text-sm text-muted-foreground">Loading…</p>
-        </div>
-      </div>
-    );
-  }
-
+  if (isLoading) return <FullPageSpinner />;
   if (!user) return <Navigate to="/login" replace />;
 
   return (
@@ -64,6 +67,7 @@ function ProtectedRoutes() {
           <Route path="/availability" element={<Availability />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/expenses" element={<Expenses />} />
+          <Route path="/reminders" element={<Reminders />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
@@ -75,13 +79,7 @@ function ProtectedRoutes() {
 function AppRoutes() {
   const { user, isLoading } = useAuth();
 
-  if (isLoading) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-background">
-        <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-      </div>
-    );
-  }
+  if (isLoading) return <FullPageSpinner />;
 
   return (
     <Suspense fallback={<PageFallback />}>
@@ -96,12 +94,47 @@ function AppRoutes() {
   );
 }
 
+function SetupGate({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["setup-status"],
+    queryFn: getSetupStatus,
+    staleTime: Infinity,
+    retry: 1,
+  });
+
+  if (isLoading) return <FullPageSpinner />;
+
+  // On error or setup already done, proceed with normal app
+  if (isError || !data?.needsSetup) {
+    if (data?.clinic?.currency) setCurrency(data.clinic.currency);
+    if (data?.clinic?.locale && !localStorage.getItem("dc_lang")) {
+      i18n.changeLanguage(data.clinic.locale);
+    }
+    return <>{children}</>;
+  }
+
+  // First-run wizard
+  return (
+    <Suspense fallback={<FullPageSpinner />}>
+      <Setup
+        onComplete={(clinic) => {
+          setCurrency(clinic.currency);
+          queryClient.setQueryData(["setup-status"], { needsSetup: false, clinic });
+        }}
+      />
+    </Suspense>
+  );
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <BrowserRouter>
-          <AppRoutes />
+          <SetupGate>
+            <AppRoutes />
+          </SetupGate>
         </BrowserRouter>
       </AuthProvider>
     </QueryClientProvider>

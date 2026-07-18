@@ -19,6 +19,7 @@ import {
   Stethoscope,
   BarChart3,
   Receipt,
+  BellRing,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -58,6 +59,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { to: "/availability", label: t("nav.availability"), icon: Clock },
     { to: "/reports", label: t("nav.reports"), icon: BarChart3 },
     { to: "/expenses", label: t("nav.expenses"), icon: Receipt },
+    { to: "/reminders", label: t("nav.reminders"), icon: BellRing },
     { to: "/settings", label: t("nav.settings"), icon: Settings },
   ];
 
