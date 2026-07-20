@@ -4,8 +4,10 @@ import {
   createInvoiceSchema,
   updateInvoiceSchema,
   addPaymentSchema,
+  updatePaymentSchema,
   listInvoicesQuerySchema,
   invoiceIdParamSchema,
+  paymentIdParamSchema,
   patientBalancesQuerySchema,
 } from "./invoices.schema.js";
 
@@ -51,4 +53,17 @@ export async function addPaymentHandler(req: Request, res: Response) {
   const input = addPaymentSchema.parse(req.body);
   const invoice = await invoicesService.addPayment(id, input, req.user!.id);
   res.status(201).json({ data: invoice });
+}
+
+export async function updatePaymentHandler(req: Request, res: Response) {
+  const id = paymentIdParamSchema.parse(req.params.paymentId);
+  const input = updatePaymentSchema.parse(req.body);
+  const invoice = await invoicesService.updatePayment(id, input);
+  res.status(200).json({ data: invoice });
+}
+
+export async function deletePaymentHandler(req: Request, res: Response) {
+  const id = paymentIdParamSchema.parse(req.params.paymentId);
+  const invoice = await invoicesService.deletePayment(id);
+  res.status(200).json({ data: invoice });
 }

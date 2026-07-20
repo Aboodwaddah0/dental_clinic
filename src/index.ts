@@ -15,6 +15,8 @@ import { expensesRouter } from "./modules/expenses/expenses.routes.js";
 import { setupRouter } from "./modules/setup/setup.routes.js";
 import { clinicSettingsRouter } from "./modules/clinic-settings/clinic-settings.routes.js";
 import { remindersRouter } from "./modules/reminders/reminder.routes.js";
+import { availabilityRouter } from "./modules/availability/availability.routes.js";
+import { landingRouter } from "./modules/landing/landing.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -53,6 +55,8 @@ app.use("/api/expenses", expensesRouter);
 app.use("/api/setup", setupRouter);
 app.use("/api/clinic-settings", clinicSettingsRouter);
 app.use("/api/reminders", remindersRouter);
+app.use("/api/availability", availabilityRouter);
+app.use("/api/landing",      landingRouter);
 
 app.use(errorHandler);
 

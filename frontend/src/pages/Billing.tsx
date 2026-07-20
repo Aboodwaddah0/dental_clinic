@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { CreditCard, ChevronDown, ChevronUp, Plus, X, AlertCircle } from "lucide-react";
+import { CreditCard, ChevronDown, ChevronUp, Plus, X, AlertCircle, Pencil, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { listInvoices, addPayment, createInvoice, deleteInvoice } from "../api/invoices";
+import { listInvoices, addPayment, updatePayment, deletePayment, createInvoice, deleteInvoice } from "../api/invoices";
 import { listPatients } from "../api/patients";
 import { toast } from "sonner";
 import type { Invoice } from "../types";
@@ -22,6 +22,7 @@ export default function Billing() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState("");
   const [showPaymentModal, setShowPaymentModal] = useState<string | null>(null);
+  const [editPayment, setEditPayment] = useState<{ id: string; amount: number; payment_method: "cash" | "card" | "transfer"; payment_date: string; note?: string | null } | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const { data } = useQuery({
@@ -38,8 +39,8 @@ export default function Billing() {
   };
 
   const paymentMutation = useMutation({
-    mutationFn: ({ invoiceId, amount, method }: { invoiceId: string; amount: number; method: "cash" | "card" | "transfer" }) =>
-      addPayment(invoiceId, { amount, payment_method: method, payment_date: new Date().toISOString() }),
+    mutationFn: ({ invoiceId, amount, method, note }: { invoiceId: string; amount: number; method: "cash" | "card" | "transfer"; note?: string }) =>
+      addPayment(invoiceId, { amount, payment_method: method, payment_date: new Date().toISOString(), note }),
     onSuccess: () => {
       toast.success(t("billing.paymentHistory"));
       setShowPaymentModal(null);
@@ -51,8 +52,8 @@ export default function Billing() {
   });
 
   const createMutation = useMutation({
-    mutationFn: ({ patient_id, total_amount }: { patient_id: string; total_amount: number }) =>
-      createInvoice({ patient_id, total_amount }),
+    mutationFn: ({ patient_id, total_amount, note }: { patient_id: string; total_amount: number; note?: string }) =>
+      createInvoice({ patient_id, total_amount, note }),
     onSuccess: () => {
       setShowCreateModal(false);
       qc.invalidateQueries({ queryKey: ["invoices"] });
@@ -60,6 +61,29 @@ export default function Billing() {
       qc.invalidateQueries({ queryKey: ["dashboard-invoices"] });
     },
     onError: () => toast.error(t("billing.noInvoices")),
+  });
+
+  const updatePaymentMutation = useMutation({
+    mutationFn: ({ id, input }: { id: string; input: Partial<{ amount: number; payment_method: "cash" | "card" | "transfer"; payment_date: string }> }) =>
+      updatePayment(id, input),
+    onSuccess: () => {
+      toast.success(t("common.save"));
+      setEditPayment(null);
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+      qc.invalidateQueries({ queryKey: ["patient-balances"] });
+    },
+    onError: () => toast.error("Failed to update payment"),
+  });
+
+  const deletePaymentMutation = useMutation({
+    mutationFn: (id: string) => deletePayment(id),
+    onSuccess: () => {
+      toast.success("Payment deleted");
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+      qc.invalidateQueries({ queryKey: ["patient-balances"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-invoices"] });
+    },
+    onError: () => toast.error("Failed to delete payment"),
   });
 
   const deleteMutation = useMutation({
@@ -119,6 +143,7 @@ export default function Billing() {
                   <div>
                     <p className="text-xs text-muted-foreground">{t("billing.columns.invoice")}</p>
                     <p className="text-sm font-semibold text-foreground truncate">{inv.id.slice(0, 8).toUpperCase()}</p>
+                    {inv.note && <p className="text-xs text-muted-foreground truncate max-w-[120px]">{inv.note}</p>}
                   </div>
                   <div className="cursor-pointer hover:underline" onClick={(e) => { e.stopPropagation(); navigate(`/patients/${inv.patient_id}`); }}>
                     <p className="text-xs text-muted-foreground">{t("billing.columns.patient")}</p>
@@ -171,8 +196,8 @@ export default function Billing() {
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead><tr className="border-b border-border">
-                          {[t("billing.columns.amount"), t("billing.columns.method"), t("billing.columns.date")].map((h) => (
-                            <th key={h} className="text-start pb-2.5 text-xs font-medium text-muted-foreground">{h}</th>
+                          {[t("billing.columns.amount"), t("billing.columns.method"), t("billing.columns.date"), t("billing.columns.note"), ""].map((h, i) => (
+                            <th key={i} className="text-start pb-2.5 text-xs font-medium text-muted-foreground">{h}</th>
                           ))}
                         </tr></thead>
                         <tbody className="divide-y divide-border">
@@ -181,6 +206,25 @@ export default function Billing() {
                               <td className="py-2.5 font-semibold text-emerald-600">{formatCurrency(Number(p.amount))}</td>
                               <td className="py-2.5 text-muted-foreground">{t(`common.paymentMethod.${p.payment_method}`)}</td>
                               <td className="py-2.5 text-muted-foreground">{formatDate(p.payment_date, isAr)}</td>
+                              <td className="py-2.5 text-muted-foreground text-xs">{p.note || "—"}</td>
+                              {canCreate() && (
+                                <td className="py-2.5">
+                                  <div className="flex items-center gap-2 justify-end">
+                                    <button
+                                      className="text-muted-foreground hover:text-primary transition-colors"
+                                      onClick={() => setEditPayment({ id: p.id, amount: Number(p.amount), payment_method: p.payment_method, payment_date: p.payment_date, note: p.note })}
+                                    >
+                                      <Pencil className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      className="text-muted-foreground hover:text-destructive transition-colors"
+                                      onClick={() => deletePaymentMutation.mutate(p.id)}
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </td>
+                              )}
                             </tr>
                           ))}
                         </tbody>
@@ -200,14 +244,22 @@ export default function Billing() {
       {showPaymentModal && (
         <PaymentModal
           onClose={() => setShowPaymentModal(null)}
-          onSave={(amount, method) => paymentMutation.mutate({ invoiceId: showPaymentModal, amount, method })}
+          onSave={(amount, method, note) => paymentMutation.mutate({ invoiceId: showPaymentModal, amount, method, note })}
           loading={paymentMutation.isPending}
+        />
+      )}
+      {editPayment && (
+        <EditPaymentModal
+          payment={editPayment}
+          onClose={() => setEditPayment(null)}
+          onSave={(input) => updatePaymentMutation.mutate({ id: editPayment.id, input })}
+          loading={updatePaymentMutation.isPending}
         />
       )}
       {showCreateModal && (
         <CreateInvoiceModal
           onClose={() => setShowCreateModal(false)}
-          onCreate={(patient_id, total_amount) => createMutation.mutate({ patient_id, total_amount })}
+          onCreate={(patient_id, total_amount, note) => createMutation.mutate({ patient_id, total_amount, note })}
           loading={createMutation.isPending}
         />
       )}
@@ -215,10 +267,11 @@ export default function Billing() {
   );
 }
 
-function PaymentModal({ onClose, onSave, loading }: { onClose: () => void; onSave: (amount: number, method: "cash" | "card" | "transfer") => void; loading: boolean }) {
+function PaymentModal({ onClose, onSave, loading }: { onClose: () => void; onSave: (amount: number, method: "cash" | "card" | "transfer", note?: string) => void; loading: boolean }) {
   const { t } = useTranslation();
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<"cash" | "card" | "transfer">("cash");
+  const [note, setNote] = useState("");
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
       <div className="bg-card rounded-xl border border-border shadow-xl w-full max-w-sm">
@@ -226,7 +279,7 @@ function PaymentModal({ onClose, onSave, loading }: { onClose: () => void; onSav
           <h3 className="font-semibold text-foreground">{t("billing.modal.recordPayment")}</h3>
           <button onClick={onClose}><X className="w-4 h-4 text-muted-foreground" /></button>
         </div>
-        <form onSubmit={(e) => { e.preventDefault(); onSave(parseFloat(amount), method); }} className="px-6 py-5 space-y-4">
+        <form onSubmit={(e) => { e.preventDefault(); onSave(parseFloat(amount), method, note || undefined); }} className="px-6 py-5 space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1.5">{t("billing.modal.amountLabel")} <span className="text-destructive">*</span></label>
             <input required type="number" min="0.01" step="0.01" className={inputCls} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" />
@@ -239,6 +292,10 @@ function PaymentModal({ onClose, onSave, loading }: { onClose: () => void; onSav
               <option value="transfer">{t("common.paymentMethod.transfer")}</option>
             </select>
           </div>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">{t("billing.columns.note")}</label>
+            <input type="text" className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("billing.modal.notePlaceholder")} />
+          </div>
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-lg border border-border text-sm font-medium hover:bg-muted transition-colors">{t("common.cancel")}</button>
             <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 disabled:opacity-60 transition-colors">{t("billing.modal.recordPayment")}</button>
@@ -249,10 +306,11 @@ function PaymentModal({ onClose, onSave, loading }: { onClose: () => void; onSav
   );
 }
 
-function CreateInvoiceModal({ onClose, onCreate, loading }: { onClose: () => void; onCreate: (patient_id: string, total_amount: number) => void; loading: boolean }) {
+function CreateInvoiceModal({ onClose, onCreate, loading }: { onClose: () => void; onCreate: (patient_id: string, total_amount: number, note?: string) => void; loading: boolean }) {
   const { t } = useTranslation();
   const [patientId, setPatientId] = useState("");
   const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
 
   const { data } = useQuery({ queryKey: ["patients-all"], queryFn: () => listPatients({ limit: 500 }), staleTime: 60_000 });
   const patients = data?.data ?? [];
@@ -264,7 +322,7 @@ function CreateInvoiceModal({ onClose, onCreate, loading }: { onClose: () => voi
           <h3 className="font-semibold text-foreground">{t("billing.modal.newInvoice")}</h3>
           <button onClick={onClose}><X className="w-4 h-4 text-muted-foreground" /></button>
         </div>
-        <form onSubmit={(e) => { e.preventDefault(); onCreate(patientId, parseFloat(amount)); }} className="px-6 py-5 space-y-4">
+        <form onSubmit={(e) => { e.preventDefault(); onCreate(patientId, parseFloat(amount), note || undefined); }} className="px-6 py-5 space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1.5">{t("appointments.form.patient")} <span className="text-destructive">*</span></label>
             <select required className={inputCls} value={patientId} onChange={(e) => setPatientId(e.target.value)}>
@@ -276,9 +334,63 @@ function CreateInvoiceModal({ onClose, onCreate, loading }: { onClose: () => voi
             <label className="block text-sm font-medium mb-1.5">{t("billing.modal.totalAmount")} <span className="text-destructive">*</span></label>
             <input required type="number" min="0.01" step="0.01" className={inputCls} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" />
           </div>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">{t("billing.columns.note")}</label>
+            <input type="text" className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("billing.modal.notePlaceholder")} />
+          </div>
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-lg border border-border text-sm font-medium hover:bg-muted transition-colors">{t("common.cancel")}</button>
             <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 disabled:opacity-60 transition-colors">{t("billing.modal.createInvoice")}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function EditPaymentModal({ payment, onClose, onSave, loading }: {
+  payment: { id: string; amount: number; payment_method: "cash" | "card" | "transfer"; payment_date: string; note?: string | null };
+  onClose: () => void;
+  onSave: (input: { amount: number; payment_method: "cash" | "card" | "transfer"; payment_date: string; note?: string }) => void;
+  loading: boolean;
+}) {
+  const { t } = useTranslation();
+  const [amount, setAmount] = useState(String(payment.amount));
+  const [method, setMethod] = useState(payment.payment_method);
+  const [date, setDate] = useState(payment.payment_date?.slice(0, 10) ?? "");
+  const [note, setNote] = useState(payment.note ?? "");
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div className="bg-card rounded-xl border border-border shadow-xl w-full max-w-sm">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <h3 className="font-semibold text-foreground">{t("common.edit")} {t("billing.columns.amount")}</h3>
+          <button onClick={onClose}><X className="w-4 h-4 text-muted-foreground" /></button>
+        </div>
+        <form onSubmit={(e) => { e.preventDefault(); onSave({ amount: parseFloat(amount), payment_method: method, payment_date: new Date(date).toISOString(), note: note || undefined }); }} className="px-6 py-5 space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1.5">{t("billing.columns.amount")} <span className="text-destructive">*</span></label>
+            <input required type="number" min="0.01" step="0.01" className={inputCls} value={amount} onChange={(e) => setAmount(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">{t("billing.modal.paymentMethod")}</label>
+            <select className={inputCls} value={method} onChange={(e) => setMethod(e.target.value as typeof method)}>
+              <option value="cash">{t("common.paymentMethod.cash")}</option>
+              <option value="card">{t("common.paymentMethod.card")}</option>
+              <option value="transfer">{t("common.paymentMethod.transfer")}</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">{t("billing.columns.date")}</label>
+            <input type="date" className={inputCls} value={date} onChange={(e) => setDate(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">{t("billing.columns.note")}</label>
+            <input type="text" className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("billing.modal.notePlaceholder")} />
+          </div>
+          <div className="flex gap-3 pt-1">
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-lg border border-border text-sm font-medium hover:bg-muted transition-colors">{t("common.cancel")}</button>
+            <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 disabled:opacity-60 transition-colors">{t("common.save")}</button>
           </div>
         </form>
       </div>

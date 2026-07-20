@@ -2,7 +2,7 @@ import { supabase } from "../../lib/supabase.js";
 import type { UpdateClinicSettingsInput } from "./clinic-settings.schema.js";
 
 const SELECT =
-  "clinic_name, address, phone, logo_url, currency, locale, reminders_enabled, reminder_lead_hours";
+  "clinic_name, address, phone, logo_url, hero_image_url, hero_bg_url, currency, locale, reminders_enabled, reminder_lead_hours";
 
 export async function getClinicSettings() {
   const { data, error } = await supabase
@@ -23,6 +23,8 @@ export async function updateClinicSettings(input: UpdateClinicSettingsInput) {
       address:             input.address || null,
       phone:               input.phone || null,
       logo_url:            input.logo_url ?? null,
+      hero_image_url:      input.hero_image_url ?? null,
+      hero_bg_url:         input.hero_bg_url    ?? null,
       currency:            input.currency,
       locale:              input.locale,
       reminders_enabled:   input.reminders_enabled,

@@ -140,6 +140,100 @@ export async function getPatientPaymentsReport(patientId: string) {
   };
 }
 
+// ─── All Patients Statement ──────────────────────────────────────────────────
+
+export async function getAllPatientsStatement() {
+  const [{ data: patients, error: pErr }, { data: invoices, error: iErr }] = await Promise.all([
+    supabase.from("patients").select("id, full_name, phone").order("full_name", { ascending: true }),
+    supabase.from("invoices").select("patient_id, total_amount, paid_amount"),
+  ]);
+
+  if (pErr) throw new Error(pErr.message);
+  if (iErr) throw new Error(iErr.message);
+
+  const totals: Record<string, { billed: number; paid: number }> = {};
+  for (const inv of invoices ?? []) {
+    if (!totals[inv.patient_id]) totals[inv.patient_id] = { billed: 0, paid: 0 };
+    totals[inv.patient_id].billed += Number(inv.total_amount);
+    totals[inv.patient_id].paid   += Number(inv.paid_amount);
+  }
+
+  const rows = (patients ?? []).map((p: any) => {
+    const t = totals[p.id] ?? { billed: 0, paid: 0 };
+    return {
+      id:          p.id,
+      full_name:   p.full_name,
+      phone:       p.phone ?? "—",
+      billed:      t.billed,
+      paid:        t.paid,
+      outstanding: t.billed - t.paid,
+    };
+  });
+
+  const summary = {
+    totalBilled:      rows.reduce((s, r) => s + r.billed, 0),
+    totalPaid:        rows.reduce((s, r) => s + r.paid, 0),
+    totalOutstanding: rows.reduce((s, r) => s + r.outstanding, 0),
+  };
+
+  return { rows, summary };
+}
+
+// ─── Account Statement Report ────────────────────────────────────────────────
+
+export async function getAccountStatementReport(patientId: string) {
+  const [{ data: patient, error: pErr }, { data: invoices, error: iErr }] = await Promise.all([
+    supabase.from("patients").select("full_name, phone, date_of_birth").eq("id", patientId).single(),
+    supabase
+      .from("invoices")
+      .select("id, total_amount, created_at, note, payments(id, amount, payment_method, payment_date, note)")
+      .eq("patient_id", patientId)
+      .order("created_at", { ascending: true }),
+  ]);
+
+  if (pErr) throw new Error(pErr.message);
+  if (iErr) throw new Error(iErr.message);
+
+  type Entry = {
+    date: string; type: "invoice" | "payment";
+    description: string; debit: number; credit: number; balance: number;
+  };
+
+  const entries: Entry[] = [];
+  let balance = 0;
+
+  for (const inv of invoices ?? []) {
+    const debit = Number(inv.total_amount);
+    balance += debit;
+    entries.push({
+      date: (inv.created_at as string).slice(0, 10),
+      type: "invoice",
+      description: `Invoice #${(inv.id as string).slice(0, 8).toUpperCase()}${inv.note ? ` — ${inv.note}` : ""}`,
+      debit, credit: 0, balance,
+    });
+
+    const sortedPayments = [...(inv.payments ?? [])].sort((a: any, b: any) =>
+      new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime()
+    );
+
+    for (const p of sortedPayments as any[]) {
+      const credit = Number(p.amount);
+      balance -= credit;
+      entries.push({
+        date: (p.payment_date as string).slice(0, 10),
+        type: "payment",
+        description: `${p.payment_method}${p.note ? ` — ${p.note}` : ""}`,
+        debit: 0, credit, balance,
+      });
+    }
+  }
+
+  const totalDebit  = entries.reduce((s, e) => s + e.debit, 0);
+  const totalCredit = entries.reduce((s, e) => s + e.credit, 0);
+
+  return { patient: patient ?? { full_name: "—", phone: "—" }, entries, summary: { totalDebit, totalCredit, balance } };
+}
+
 // ─── Patient History Report ──────────────────────────────────────────────────
 
 export async function getPatientHistoryReport(patientId: string) {

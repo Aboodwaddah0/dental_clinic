@@ -7,6 +7,8 @@ import {
   updateInvoiceHandler,
   deleteInvoiceHandler,
   addPaymentHandler,
+  updatePaymentHandler,
+  deletePaymentHandler,
   getPatientBalancesHandler,
 } from "./invoices.controller.js";
 
@@ -21,3 +23,5 @@ invoicesRouter.post("/", requireRole("doctor"), createInvoiceHandler);
 invoicesRouter.put("/:id", requireRole("doctor"), updateInvoiceHandler);
 invoicesRouter.delete("/:id", requireRole("doctor"), deleteInvoiceHandler);
 invoicesRouter.post("/:id/payments", requireRole("doctor"), addPaymentHandler);
+invoicesRouter.put("/payments/:paymentId", requireRole("doctor"), updatePaymentHandler);
+invoicesRouter.delete("/payments/:paymentId", requireRole("doctor"), deletePaymentHandler);

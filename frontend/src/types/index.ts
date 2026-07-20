@@ -75,6 +75,7 @@ export interface Invoice {
   paid_amount: number;
   status: "unpaid" | "partially_paid" | "paid";
   created_at: string;
+  note?: string | null;
   payments: Payment[];
 }
 
@@ -85,6 +86,7 @@ export interface Payment {
   payment_method: "cash" | "card" | "transfer";
   payment_date: string;
   received_by: string;
+  note?: string | null;
 }
 
 export interface AvailabilitySlot {

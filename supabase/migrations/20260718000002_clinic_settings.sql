@@ -1,4 +1,4 @@
-create table clinic_settings (
+create table if not exists clinic_settings (
   singleton            int primary key default 1 check (singleton = 1),
   clinic_name          text not null,
   address              text,
@@ -17,11 +17,22 @@ create table clinic_settings (
   updated_at           timestamptz not null default now()
 );
 
-create trigger set_clinic_settings_updated_at
-  before update on clinic_settings
-  for each row execute function set_updated_at();
+do $$ begin
+  create trigger set_clinic_settings_updated_at
+    before update on clinic_settings
+    for each row execute function set_updated_at();
+exception when duplicate_object then null;
+end $$;
 
 alter table clinic_settings enable row level security;
-create policy clinic_settings_read on clinic_settings for select using (auth.role() = 'authenticated');
-create policy clinic_settings_write on clinic_settings for all
-  using (current_staff_role() = 'doctor') with check (current_staff_role() = 'doctor');
+
+do $$ begin
+  create policy clinic_settings_read on clinic_settings for select using (auth.role() = 'authenticated');
+exception when duplicate_object then null;
+end $$;
+
+do $$ begin
+  create policy clinic_settings_write on clinic_settings for all
+    using (current_staff_role() = 'doctor') with check (current_staff_role() = 'doctor');
+exception when duplicate_object then null;
+end $$;

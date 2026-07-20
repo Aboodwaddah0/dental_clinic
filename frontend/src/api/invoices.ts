@@ -6,11 +6,13 @@ export interface PaymentInput {
   amount: number;
   payment_method: "cash" | "card" | "transfer";
   payment_date?: string;
+  note?: string;
 }
 
 export interface InvoiceInput {
   patient_id: string;
   total_amount: number;
+  note?: string;
 }
 
 export const listInvoices = (params?: { patient_id?: string; status?: string; limit?: number; offset?: number }) =>
@@ -35,3 +37,9 @@ export const deleteInvoice = (id: string) =>
 
 export const addPayment = (invoiceId: string, input: PaymentInput) =>
   request<{ data: Invoice }>(`/api/invoices/${invoiceId}/payments`, { method: "POST", body: input });
+
+export const updatePayment = (paymentId: string, input: Partial<PaymentInput>) =>
+  request<{ data: Invoice }>(`/api/invoices/payments/${paymentId}`, { method: "PUT", body: input });
+
+export const deletePayment = (paymentId: string) =>
+  request<{ data: Invoice }>(`/api/invoices/payments/${paymentId}`, { method: "DELETE" });

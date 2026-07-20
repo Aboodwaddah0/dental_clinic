@@ -1,6 +1,6 @@
 ﻿import { supabase } from "../../lib/supabase.js";
 import { NotFoundError } from "../../lib/errors.js";
-import type { CreateInvoiceInput, UpdateInvoiceInput, AddPaymentInput, ListInvoicesQuery } from "./invoices.schema.js";
+import type { CreateInvoiceInput, UpdateInvoiceInput, AddPaymentInput, UpdatePaymentInput, ListInvoicesQuery } from "./invoices.schema.js";
 
 const INVOICE_SELECT = "*, patient:patients!patient_id(full_name), payments(*)";
 
@@ -86,6 +86,30 @@ export async function deleteInvoice(id: string) {
   return data;
 }
 
+export async function updatePayment(paymentId: string, input: UpdatePaymentInput) {
+  const { data, error } = await supabase
+    .from("payments")
+    .update(input)
+    .eq("id", paymentId)
+    .select("invoice_id")
+    .single();
+
+  if (error) throw new NotFoundError("Payment not found");
+  return getInvoiceById(data.invoice_id);
+}
+
+export async function deletePayment(paymentId: string) {
+  const { data, error } = await supabase
+    .from("payments")
+    .delete()
+    .eq("id", paymentId)
+    .select("invoice_id")
+    .single();
+
+  if (error) throw new NotFoundError("Payment not found");
+  return getInvoiceById(data.invoice_id);
+}
+
 export async function addPayment(invoiceId: string, input: AddPaymentInput, receivedBy: string) {
   const { data, error } = await supabase
     .from("payments")
@@ -95,6 +119,7 @@ export async function addPayment(invoiceId: string, input: AddPaymentInput, rece
       payment_method: input.payment_method,
       payment_date: input.payment_date ?? new Date().toISOString(),
       received_by: receivedBy,
+      note: input.note ?? null,
     })
     .select()
     .single();

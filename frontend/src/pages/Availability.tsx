@@ -27,9 +27,10 @@ export default function Availability() {
     try {
       await request("/api/availability", { method: "PUT", body: slots });
       setSaved(true);
+      toast.success(t("availability.saveSuccess"));
       setTimeout(() => setSaved(false), 3000);
     } catch {
-      toast.error(t("availability.saveSchedule"));
+      toast.error(t("availability.saveError"));
     }
   };
 
@@ -87,7 +88,7 @@ export default function Availability() {
               <div className="grid grid-cols-[120px_1fr_1fr_80px] gap-4 items-center">
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                  <span className="text-sm font-semibold text-foreground">{slot.day}</span>
+                  <span className="text-sm font-semibold text-foreground">{t(`availability.days.${slot.day}`, slot.day)}</span>
                 </div>
 
                 <input

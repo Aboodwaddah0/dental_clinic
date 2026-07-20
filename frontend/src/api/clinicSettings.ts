@@ -5,6 +5,8 @@ export interface ClinicSettings {
   address: string | null;
   phone: string | null;
   logo_url: string | null;
+  hero_image_url: string | null;
+  hero_bg_url: string | null;
   currency: string;
   locale: string;
   reminders_enabled: boolean;

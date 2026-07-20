@@ -25,3 +25,14 @@ export async function getPatientHistoryReportHandler(req: Request, res: Response
   const data = await service.getPatientHistoryReport(patientId);
   res.json({ data });
 }
+
+export async function getAccountStatementReportHandler(req: Request, res: Response) {
+  const patientId = patientIdParamSchema.parse(req.params.patientId);
+  const data = await service.getAccountStatementReport(patientId);
+  res.json({ data });
+}
+
+export async function getAllPatientsStatementHandler(req: Request, res: Response) {
+  const data = await service.getAllPatientsStatement();
+  res.json({ data });
+}

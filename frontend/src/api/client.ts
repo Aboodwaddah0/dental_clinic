@@ -3,9 +3,8 @@ import { ApiError, type ApiErrorBody } from "./types";
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
 
 let authToken: string | null = null;
-export function setAuthToken(token: string | null) {
-  authToken = token;
-}
+export function setAuthToken(token: string | null) { authToken = token; }
+export function getAuthToken(): string | null { return authToken; }
 
 let onUnauthorized: (() => void) | null = null;
 export function setUnauthorizedHandler(handler: () => void) {

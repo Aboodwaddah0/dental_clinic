@@ -5,6 +5,8 @@ import {
   getPaymentsReportHandler,
   getPatientPaymentsReportHandler,
   getPatientHistoryReportHandler,
+  getAccountStatementReportHandler,
+  getAllPatientsStatementHandler,
 } from "./reports.controller.js";
 
 export const reportsRouter = Router();
@@ -15,4 +17,6 @@ reportsRouter.use(requireRole("doctor"));
 reportsRouter.get("/financial",                   getFinancialReportHandler);
 reportsRouter.get("/payments",                    getPaymentsReportHandler);
 reportsRouter.get("/patient-payments/:patientId", getPatientPaymentsReportHandler);
-reportsRouter.get("/patient-history/:patientId",  getPatientHistoryReportHandler);
+reportsRouter.get("/patient-history/:patientId",    getPatientHistoryReportHandler);
+reportsRouter.get("/account-statement/:patientId", getAccountStatementReportHandler);
+reportsRouter.get("/all-patients-statement",       getAllPatientsStatementHandler);

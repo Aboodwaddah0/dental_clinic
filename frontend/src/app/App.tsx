@@ -30,6 +30,7 @@ const Reports = lazy(() => import("../pages/Reports"));
 const Expenses = lazy(() => import("../pages/Expenses"));
 const Reminders = lazy(() => import("../pages/Reminders"));
 const Setup = lazy(() => import("../pages/Setup"));
+const LandingPage = lazy(() => import("../pages/LandingPage"));
 
 function PageFallback() {
   return (
@@ -84,6 +85,7 @@ function AppRoutes() {
   return (
     <Suspense fallback={<PageFallback />}>
       <Routes>
+        <Route path="/landing" element={<LandingPage />} />
         <Route
           path="/login"
           element={user ? <Navigate to="/dashboard" replace /> : <Login />}

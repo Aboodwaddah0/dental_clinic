@@ -48,6 +48,33 @@ export interface PatientHistoryReportData {
   dentalRecords:{ date: string; tooth: number; condition: string; treatment: string; status: string; doctor: string }[];
 }
 
+export interface AllPatientsStatementRow {
+  id: string; full_name: string; phone: string;
+  billed: number; paid: number; outstanding: number;
+}
+
+export interface AllPatientsStatementData {
+  rows: AllPatientsStatementRow[];
+  summary: { totalBilled: number; totalPaid: number; totalOutstanding: number };
+}
+
+export const getAllPatientsStatement = () =>
+  request<{ data: AllPatientsStatementData }>("/api/reports/all-patients-statement");
+
+export interface AccountStatementEntry {
+  date: string; type: "invoice" | "payment";
+  description: string; debit: number; credit: number; balance: number;
+}
+
+export interface AccountStatementReportData {
+  patient: { full_name: string; phone: string; date_of_birth?: string };
+  entries: AccountStatementEntry[];
+  summary: { totalDebit: number; totalCredit: number; balance: number };
+}
+
+export const getAccountStatementReport = (patientId: string) =>
+  request<{ data: AccountStatementReportData }>(`/api/reports/account-statement/${patientId}`);
+
 export const getFinancialReport = (params: { from?: string; to?: string }) =>
   request<{ data: FinancialReportData }>("/api/reports/financial", { query: params });
 
